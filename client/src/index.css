@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #0a0a0f;
+  color: #e5e5e5;
+  font-family: 'Inter', system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #12121a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #32324a;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #8b5cf6;
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-dark-800/50 backdrop-blur-sm border border-dark-600/50 rounded-xl;
+  }
+  
+  .gradient-text {
+    @apply bg-gradient-to-r from-accent-purple via-accent-blue to-accent-cyan bg-clip-text text-transparent;
+  }
+  
+  .btn-primary {
+    @apply px-4 py-2 bg-gradient-to-r from-accent-purple to-accent-blue rounded-lg font-medium 
+           hover:opacity-90 transition-all duration-200 text-white;
+  }
+  
+  .btn-secondary {
+    @apply px-4 py-2 bg-dark-600 rounded-lg font-medium 
+           hover:bg-dark-500 transition-all duration-200 text-gray-300;
+  }
+  
+  .btn-danger {
+    @apply px-4 py-2 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg font-medium 
+           hover:bg-red-500/30 transition-all duration-200;
+  }
+  
+  .input-field {
+    @apply w-full px-4 py-2 bg-dark-700 border border-dark-500 rounded-lg 
+           focus:outline-none focus:border-accent-purple transition-colors text-white;
+  }
+  
+  .nav-link {
+    @apply flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 
+           hover:text-white hover:bg-dark-700/50 transition-all duration-200;
+  }
+  
+  .nav-link.active {
+    @apply text-white bg-gradient-to-r from-accent-purple/20 to-accent-blue/20 
+           border-l-2 border-accent-purple;
+  }
+}
