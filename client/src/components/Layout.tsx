@@ -9,14 +9,11 @@ import {
   LogOut,
   Menu,
   X,
-  Sun,
-  Moon,
   Keyboard,
   User,
   ChevronDown,
 } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext.jsx';
 import ShortcutsHelp, { useShortcutsHelp } from './ShortcutsHelp';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import TimerWidget from './TimerWidget';
@@ -38,7 +35,6 @@ export default function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, signOut } = useAuth();
-  const { resolvedTheme, toggleTheme } = useTheme();
   const shortcutsHelp = useShortcutsHelp();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -99,12 +95,7 @@ export default function Layout({ children }: LayoutProps) {
             <span className="font-bold">DevOrbit</span>
           </div>
 
-          <button
-            onClick={toggleTheme}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-dark-700 rounded-lg"
-          >
-            {resolvedTheme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-          </button>
+          <div className="w-10" />
         </div>
       </header>
 
@@ -171,24 +162,6 @@ export default function Layout({ children }: LayoutProps) {
 
           {/* Footer Actions */}
           <div className="px-3 py-4 border-t border-gray-200 dark:border-dark-600 space-y-2">
-            {/* Theme Toggle (Desktop) */}
-            <button
-              onClick={toggleTheme}
-              className="hidden lg:flex items-center gap-3 w-full px-3 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-700 rounded-lg transition-colors"
-            >
-              {resolvedTheme === 'dark' ? (
-                <>
-                  <Sun className="w-5 h-5" />
-                  <span>Light Mode</span>
-                </>
-              ) : (
-                <>
-                  <Moon className="w-5 h-5" />
-                  <span>Dark Mode</span>
-                </>
-              )}
-            </button>
-
             {/* Shortcuts */}
             <button
               onClick={shortcutsHelp.open}

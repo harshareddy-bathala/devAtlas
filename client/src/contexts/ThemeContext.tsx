@@ -1,21 +1,12 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react';
 import type { Theme } from '../types';
-import { useAuth } from './AuthContext';
-import { authApi } from '../lib/api';
 
 interface ThemeContextType {
   theme: Theme;
-  resolvedTheme: 'dark' | 'light';
-  setTheme: (theme: Theme) => Promise<void>;
-  toggleTheme: () => Promise<void>;
+  resolvedTheme: 'dark';
 }
 
 const ThemeContext = createContext<ThemeContextType | null>(null);
-
-function getSystemTheme(): 'dark' | 'light' {
-  if (typeof window === 'undefined') return 'dark';
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-}
 
 function applyTheme(theme: 'dark' | 'light') {
   const root = document.documentElement;
@@ -30,69 +21,20 @@ function applyTheme(theme: 'dark' | 'light') {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const { user, isAuthenticated } = useAuth();
-  const [theme, setThemeState] = useState<Theme>(() => {
-    // Try to get from localStorage first
-    const stored = localStorage.getItem('theme') as Theme | null;
-    return stored || 'SYSTEM';
-  });
-
-  // Calculate resolved theme
-  const resolvedTheme = theme === 'SYSTEM' ? getSystemTheme() : theme.toLowerCase() as 'dark' | 'light';
-
-  // Apply theme on mount and when it changes
   useEffect(() => {
-    applyTheme(resolvedTheme);
-  }, [resolvedTheme]);
+    applyTheme('dark');
+  }, []);
 
-  // Listen for system theme changes
-  useEffect(() => {
-    if (theme !== 'SYSTEM') return;
-
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = () => {
-      applyTheme(getSystemTheme());
-    };
-
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, [theme]);
-
-  // Sync with user preference when authenticated
-  useEffect(() => {
-    if (isAuthenticated && user?.theme) {
-      setThemeState(user.theme);
-    }
-  }, [isAuthenticated, user?.theme]);
-
-  const setTheme = async (newTheme: Theme) => {
-    setThemeState(newTheme);
-    localStorage.setItem('theme', newTheme);
-
-    // Persist to backend if authenticated
-    if (isAuthenticated) {
-      try {
-        await authApi.updateMe({ theme: newTheme });
-      } catch (error) {
-        console.error('Failed to save theme preference:', error);
-      }
-    }
-  };
-
-  const toggleTheme = async () => {
-    const nextTheme: Theme = theme === 'DARK' ? 'LIGHT' : theme === 'LIGHT' ? 'SYSTEM' : 'DARK';
-    await setTheme(nextTheme);
-  };
+  const value = useMemo<ThemeContextType>(
+    () => ({
+      theme: 'DARK',
+      resolvedTheme: 'dark',
+    }),
+    []
+  );
 
   return (
-    <ThemeContext.Provider
-      value={{
-        theme,
-        resolvedTheme,
-        setTheme,
-        toggleTheme,
-      }}
-    >
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   );
