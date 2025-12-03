@@ -1,31 +1,23 @@
 # Dependencies
 node_modules/
-.pnp/
-.pnp.js
 
 # Build outputs
 dist/
 build/
-.next/
-out/
 
 # Environment files
 .env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*.local
 
-# Data files (contains user data)
-server/data.json
-server/backups/
+# Firebase service account key (IMPORTANT: never commit this!)
+server/serviceAccountKey.json
+serviceAccountKey.json
 
 # Logs
 logs/
 *.log
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 
 # OS files
 .DS_Store
@@ -35,21 +27,9 @@ Thumbs.db
 .idea/
 .vscode/*
 !.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
 !.vscode/extensions.json
-*.swp
-*.swo
-
-# Test coverage
-coverage/
-.nyc_output/
 
 # Temp files
 *.tmp
 *.temp
 .cache/
-
-# Lock files (optional - uncomment if you want to ignore)
-# package-lock.json
-# yarn.lock
