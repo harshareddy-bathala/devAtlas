@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { Github, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -7,7 +7,6 @@ import toast from 'react-hot-toast';
 type AuthMode = 'signin' | 'signup';
 
 export default function LoginPage() {
-  const navigate = useNavigate();
   const { signIn, signUp, signInWithGitHub, signInWithGoogle, isLoading } = useAuth();
   const [mode, setMode] = useState<AuthMode>('signin');
   const [email, setEmail] = useState('');
@@ -36,12 +35,12 @@ export default function LoginPage() {
         toast.success('Welcome back!');
       } else {
         await signUp(email, password);
-        toast.success('Account created! Please check your email to verify.');
+        toast.success('Account created!');
       }
-      navigate('/');
+      // Don't navigate manually - let the auth state change trigger route guards
+      // The PublicRoute will automatically redirect to dashboard/onboarding
     } catch (error: any) {
       toast.error(error.message || 'Authentication failed');
-    } finally {
       setIsSubmitting(false);
     }
   };

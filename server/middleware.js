@@ -14,6 +14,7 @@ function validate(schema) {
           field: e.path.join('.'),
           message: e.message
         }));
+        console.error('Validation error:', JSON.stringify(errors), 'Body:', JSON.stringify(req.body));
         return res.status(400).json({
           success: false,
           error: 'Validation failed',

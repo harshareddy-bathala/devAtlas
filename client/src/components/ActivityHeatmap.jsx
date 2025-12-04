@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 
 function ActivityHeatmap({ data }) {
-  const heatmapGrid = useMemo(() => {
+  const { weeks, monthLabels } = useMemo(() => {
     // Create a map of date -> count
     const dateMap = {};
     data.forEach(item => {
@@ -19,12 +19,14 @@ function ActivityHeatmap({ data }) {
       days.push({
         date: dateStr,
         count: dateMap[dateStr] || 0,
-        dayOfWeek: date.getDay()
+        dayOfWeek: date.getDay(),
+        month: date.getMonth(),
+        year: date.getFullYear()
       });
     }
 
-    // Group by weeks
-    const weeks = [];
+    // Group by weeks (Sunday = 0 start of week)
+    const weeksArr = [];
     let currentWeek = [];
     
     // Add empty cells for the first week if needed
@@ -36,94 +38,111 @@ function ActivityHeatmap({ data }) {
     days.forEach((day) => {
       currentWeek.push(day);
       if (day.dayOfWeek === 6) {
-        weeks.push(currentWeek);
+        weeksArr.push(currentWeek);
         currentWeek = [];
       }
     });
     
     if (currentWeek.length > 0) {
-      weeks.push(currentWeek);
+      // Pad the last week
+      while (currentWeek.length < 7) {
+        currentWeek.push(null);
+      }
+      weeksArr.push(currentWeek);
     }
 
-    return weeks;
-  }, [data]);
-
-  const getIntensityClass = (count) => {
-    if (count === 0) return 'bg-dark-600';
-    if (count === 1) return 'bg-accent-green/25';
-    if (count <= 3) return 'bg-accent-green/50';
-    if (count <= 5) return 'bg-accent-green/75';
-    return 'bg-accent-green';
-  };
-
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-  // Calculate month labels position
-  const getMonthLabels = () => {
+    // Calculate month label positions
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const labels = [];
     let lastMonth = -1;
     
-    heatmapGrid.forEach((week, weekIndex) => {
-      const firstDay = week.find(d => d !== null);
-      if (firstDay) {
-        const month = new Date(firstDay.date).getMonth();
+    weeksArr.forEach((week, weekIndex) => {
+      const firstValidDay = week.find(d => d !== null);
+      if (firstValidDay) {
+        const month = firstValidDay.month;
         if (month !== lastMonth) {
-          labels.push({ month: months[month], position: weekIndex });
+          labels.push({ 
+            label: months[month], 
+            weekIndex,
+            colSpan: 1
+          });
           lastMonth = month;
         }
       }
     });
-    
-    return labels;
+
+    // Calculate column spans for each month
+    for (let i = 0; i < labels.length; i++) {
+      const startWeek = labels[i].weekIndex;
+      const endWeek = i < labels.length - 1 ? labels[i + 1].weekIndex : weeksArr.length;
+      labels[i].colSpan = endWeek - startWeek;
+    }
+
+    return { weeks: weeksArr, monthLabels: labels };
+  }, [data]);
+
+  const getIntensityClass = (count) => {
+    if (count === 0) return 'bg-[#2d333b]';
+    if (count === 1) return 'bg-[#0e4429]';
+    if (count <= 3) return 'bg-[#006d32]';
+    if (count <= 5) return 'bg-[#26a641]';
+    return 'bg-[#39d353]';
   };
 
-  const monthLabels = getMonthLabels();
+  const formatDate = (dateStr) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { 
+      weekday: 'short', 
+      month: 'short', 
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
+  const totalWeeks = weeks.length;
+  const cellSize = 10;
+  const cellGap = 3;
+  const dayLabelWidth = 28;
 
   return (
-    <div className="overflow-x-auto">
-      {/* Month labels */}
-      <div className="flex mb-2 ml-8">
-        {monthLabels.map(({ month, position }, index) => (
-          <div 
-            key={index} 
-            className="text-xs text-gray-500"
-            style={{ 
-              position: 'absolute', 
-              left: `${position * 14 + 32}px`
-            }}
-          >
-            {month}
-          </div>
-        ))}
-      </div>
-      
-      <div className="flex gap-1 mt-6">
-        {/* Day labels */}
-        <div className="flex flex-col gap-1 mr-2 text-xs text-gray-500">
-          {dayLabels.map((day, i) => (
-            <div key={day} className="h-3 flex items-center" style={{ display: i % 2 === 1 ? 'flex' : 'none' }}>
-              {day}
-            </div>
+    <div className="w-full overflow-x-auto flex justify-center">
+      <table className="border-collapse" style={{ borderSpacing: `${cellGap}px` }}>
+        <thead>
+          <tr>
+            <td style={{ width: dayLabelWidth }} />
+            {monthLabels.map(({ label, colSpan }, index) => (
+              <td 
+                key={index}
+                colSpan={colSpan}
+                className="text-xs text-gray-500 font-normal text-left px-[1.5px]"
+              >
+                {colSpan >= 3 ? label : ''}
+              </td>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {[0, 1, 2, 3, 4, 5, 6].map((dayIndex) => (
+            <tr key={dayIndex}>
+              <td className="text-xs text-gray-500 pr-2 text-right" style={{ width: dayLabelWidth }}>
+                {dayIndex === 1 ? 'Mon' : dayIndex === 3 ? 'Wed' : dayIndex === 5 ? 'Fri' : ''}
+              </td>
+              {weeks.map((week, weekIndex) => {
+                const day = week[dayIndex];
+                return (
+                  <td key={weekIndex} className="p-[1.5px]">
+                    <div
+                      className={`rounded-sm ${day ? getIntensityClass(day.count) : 'bg-transparent'}`}
+                      style={{ width: cellSize, height: cellSize }}
+                      title={day ? `${day.count} ${day.count === 1 ? 'activity' : 'activities'} on ${formatDate(day.date)}` : ''}
+                    />
+                  </td>
+                );
+              })}
+            </tr>
           ))}
-        </div>
-        
-        {/* Heatmap grid */}
-        <div className="flex gap-1">
-          {heatmapGrid.map((week, weekIndex) => (
-            <div key={weekIndex} className="flex flex-col gap-1">
-              {week.map((day, dayIndex) => (
-                <div
-                  key={dayIndex}
-                  className={`w-3 h-3 rounded-sm ${day ? getIntensityClass(day.count) : 'bg-transparent'} 
-                    hover:ring-1 hover:ring-white/50 transition-all cursor-pointer`}
-                  title={day ? `${day.date}: ${day.count} activities` : ''}
-                />
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
+        </tbody>
+      </table>
     </div>
   );
 }

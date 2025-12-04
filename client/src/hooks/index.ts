@@ -1,5 +1,17 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 
+// Re-export usePagination hook with data fetching capabilities
+export { usePagination } from './usePagination';
+export type { 
+  PaginationMeta, 
+  PaginatedResponse, 
+  UsePaginationOptions as UsePaginationWithFetchOptions, 
+  UsePaginationResult 
+} from './usePagination';
+
+// Re-export useVirtualization hook
+export { useVirtualization, estimateItemHeight } from './useVirtualization';
+
 // Hook for debouncing values
 export function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);

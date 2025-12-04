@@ -1,163 +1,403 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { Download, Upload, Trash2, Database, AlertTriangle } from 'lucide-react';
+import { 
+  Trash2, 
+  User,
+  Mail,
+  Key,
+  Shield,
+  Github,
+  Check,
+  X,
+  Loader2,
+  Edit3,
+  Save,
+  Link as LinkIcon,
+  Unlink
+} from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext.jsx';
+import { isEmailProvider, getLinkedProviders, linkGitHubAccount, unlinkProvider } from '../lib/firebase';
 import api from '../utils/api';
-import { LoadingButton } from '../components/LoadingStates';
-import ConfirmDialog from '../components/ConfirmDialog';
+import DeleteAccountModal from '../components/DeleteAccountModal';
+import ChangePasswordModal from '../components/ChangePasswordModal';
 
 function Settings() {
-  const [exporting, setExporting] = useState(false);
-  const [importing, setImporting] = useState(false);
-  const [clearConfirm, setClearConfirm] = useState(false);
+  const { user, refreshUserProfile } = useAuth();
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [changePasswordModalOpen, setChangePasswordModalOpen] = useState(false);
+  
+  // Profile editing state
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileData, setProfileData] = useState({
+    displayName: '',
+    username: '',
+    bio: ''
+  });
+  const [originalProfile, setOriginalProfile] = useState(null);
+  const [savingProfile, setSavingProfile] = useState(false);
+  
+  // GitHub linking state
+  const [linkingGithub, setLinkingGithub] = useState(false);
+  const [unlinkingGithub, setUnlinkingGithub] = useState(false);
+  
+  const isEmailUser = isEmailProvider();
+  const linkedProviders = getLinkedProviders();
+  const hasGithubLinked = linkedProviders.includes('github.com');
+  const hasGoogleLinked = linkedProviders.includes('google.com');
 
-  const handleExport = async () => {
-    setExporting(true);
+  useEffect(() => {
+    loadProfile();
+  }, [user]);
+
+  const loadProfile = async () => {
+    setProfileLoading(true);
     try {
-      const data = await api.exportData();
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `devorbit-backup-${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      toast.success('Data exported successfully');
+      const data = await api.getProfile();
+      const profile = {
+        displayName: data.displayName || '',
+        username: data.username || '',
+        bio: data.bio || ''
+      };
+      setProfileData(profile);
+      setOriginalProfile(profile);
     } catch (error) {
-      toast.error(error.message || 'Failed to export data');
+      // Only use empty defaults - don't fall back to user.name from auth
+      const profile = {
+        displayName: '',
+        username: '',
+        bio: ''
+      };
+      setProfileData(profile);
+      setOriginalProfile(profile);
     } finally {
-      setExporting(false);
+      setProfileLoading(false);
     }
   };
 
-  const handleImport = async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const handleSaveProfile = async () => {
+    if (!profileData.displayName.trim()) {
+      toast.error('Display name is required');
+      return;
+    }
 
-    setImporting(true);
+    setSavingProfile(true);
     try {
-      const text = await file.text();
-      const data = JSON.parse(text);
-      const result = await api.importData(data);
-      toast.success(`Imported ${result.imported?.skills || 0} skills, ${result.imported?.projects || 0} projects, ${result.imported?.resources || 0} resources`);
-      // Reload page to reflect changes
-      window.location.reload();
+      await api.updateProfile(profileData);
+      setOriginalProfile(profileData);
+      setIsEditingProfile(false);
+      toast.success('Profile updated successfully');
+      // Refresh user profile in context so sidebar updates
+      refreshUserProfile();
     } catch (error) {
-      toast.error(error.message || 'Failed to import data. Make sure the file is a valid DevOrbit backup.');
+      toast.error(error.message || 'Failed to update profile');
     } finally {
-      setImporting(false);
-      event.target.value = '';
+      setSavingProfile(false);
     }
   };
 
-  const handleClearData = async () => {
+  const handleCancelEdit = () => {
+    setProfileData(originalProfile);
+    setIsEditingProfile(false);
+  };
+
+  const handleLinkGitHub = async () => {
+    setLinkingGithub(true);
     try {
-      await api.clearAllData();
-      toast.success('All data cleared successfully');
-      // Reload page to reflect changes
+      await linkGitHubAccount();
+      toast.success('GitHub account linked successfully!');
+      window.location.reload(); // Refresh to update provider list
+    } catch (error) {
+      console.error('GitHub link error:', error);
+      // User cancelled or closed popup
+      if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/user-cancelled') {
+        toast.error('GitHub linking was cancelled');
+      } else if (error.code === 'auth/credential-already-in-use') {
+        toast.error('This GitHub account is already linked to another user');
+      } else if (error.code === 'auth/popup-blocked') {
+        toast.error('Popup blocked. Please allow popups and try again.');
+      } else {
+        toast.error('Failed to link GitHub account. Please try again.');
+      }
+    } finally {
+      setLinkingGithub(false);
+    }
+  };
+
+  const handleUnlinkGitHub = async () => {
+    if (linkedProviders.length <= 1) {
+      toast.error('Cannot unlink - you need at least one sign-in method');
+      return;
+    }
+
+    setUnlinkingGithub(true);
+    try {
+      await unlinkProvider('github.com');
+      toast.success('GitHub account unlinked');
       window.location.reload();
     } catch (error) {
-      toast.error(error.message || 'Failed to clear data');
+      toast.error(error.message || 'Failed to unlink GitHub');
+    } finally {
+      setUnlinkingGithub(false);
     }
   };
 
   return (
-    <div className="space-y-8 max-w-2xl">
+    <div className="space-y-4 max-w-2xl mx-auto">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Settings</h1>
-        <p className="text-gray-400">Manage your data and preferences</p>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold mb-1">Settings</h1>
+        <p className="text-gray-400 text-sm">Manage your account preferences</p>
       </div>
 
-      {/* Data Management Section */}
-      <div className="glass-card p-6">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 bg-accent-purple/10 rounded-lg">
-            <Database className="w-5 h-5 text-accent-purple" />
+      {/* Profile Section */}
+      <div className="glass-card p-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <User className="w-4 h-4 text-primary-400" />
+            <h2 className="font-semibold">Profile</h2>
           </div>
-          <div>
-            <h2 className="text-xl font-semibold">Data Management</h2>
-            <p className="text-sm text-gray-400">Export, import, or clear your data</p>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          {/* Export */}
-          <div className="flex items-center justify-between p-4 bg-dark-700/50 rounded-lg">
-            <div>
-              <h3 className="font-medium">Export Data</h3>
-              <p className="text-sm text-gray-400">Download a backup of all your skills, projects, resources, and activities</p>
-            </div>
-            <LoadingButton 
-              onClick={handleExport} 
-              loading={exporting}
-              className="btn-secondary flex items-center gap-2"
-            >
-              <Download className="w-4 h-4" />
-              Export
-            </LoadingButton>
-          </div>
-
-          {/* Import */}
-          <div className="flex items-center justify-between p-4 bg-dark-700/50 rounded-lg">
-            <div>
-              <h3 className="font-medium">Import Data</h3>
-              <p className="text-sm text-gray-400">Restore from a backup file (existing data will be kept)</p>
-            </div>
-            <label className={`btn-secondary flex items-center gap-2 cursor-pointer ${importing ? 'opacity-50' : ''}`}>
-              <Upload className="w-4 h-4" />
-              {importing ? 'Importing...' : 'Import'}
-              <input 
-                type="file" 
-                accept=".json" 
-                onChange={handleImport} 
-                className="hidden"
-                disabled={importing}
-              />
-            </label>
-          </div>
-
-          {/* Clear Data */}
-          <div className="flex items-center justify-between p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
-            <div>
-              <h3 className="font-medium text-red-400">Clear All Data</h3>
-              <p className="text-sm text-gray-400">Permanently delete all your data and start fresh</p>
-            </div>
+          {!isEditingProfile ? (
             <button 
-              onClick={() => setClearConfirm(true)}
-              className="btn-danger flex items-center gap-2"
+              onClick={() => setIsEditingProfile(true)}
+              className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
             >
-              <Trash2 className="w-4 h-4" />
-              Clear Data
+              <Edit3 className="w-3 h-3" />
+              Edit
             </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={handleCancelEdit}
+                className="text-xs text-gray-400 hover:text-white flex items-center gap-1"
+                disabled={savingProfile}
+              >
+                <X className="w-3 h-3" />
+                Cancel
+              </button>
+              <button 
+                onClick={handleSaveProfile}
+                disabled={savingProfile}
+                className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
+              >
+                {savingProfile ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Save className="w-3 h-3" />
+                )}
+                Save
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-start gap-4">
+          <div className="w-14 h-14 rounded-xl bg-primary-500 flex items-center justify-center text-xl font-bold text-white flex-shrink-0">
+            {user?.avatarUrl ? (
+              <img src={user.avatarUrl} alt="" className="w-full h-full rounded-xl object-cover" />
+            ) : (
+              profileData.displayName?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'
+            )}
+          </div>
+
+          <div className="flex-1 space-y-3">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Display Name</label>
+              {profileLoading ? (
+                <div className="h-5 w-32 bg-dark-600 rounded animate-pulse" />
+              ) : isEditingProfile ? (
+                <input
+                  type="text"
+                  value={profileData.displayName}
+                  onChange={(e) => setProfileData({ ...profileData, displayName: e.target.value })}
+                  className="input-field text-sm py-1.5"
+                  placeholder="Your name"
+                />
+              ) : (
+                <p className="text-sm font-medium">{profileData.displayName || 'Not set'}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Email</label>
+              <div className="flex items-center gap-2">
+                <Mail className="w-3.5 h-3.5 text-gray-500" />
+                <p className="text-sm text-gray-400">{user?.email}</p>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Username</label>
+              {profileLoading ? (
+                <div className="h-5 w-24 bg-dark-600 rounded animate-pulse" />
+              ) : isEditingProfile && !originalProfile?.username ? (
+                <input
+                  type="text"
+                  value={profileData.username}
+                  onChange={(e) => setProfileData({ ...profileData, username: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') })}
+                  className="input-field text-sm py-1.5"
+                  placeholder="Choose a username"
+                />
+              ) : (
+                <p className="text-sm text-gray-400">
+                  {profileData.username ? `@${profileData.username}` : 'Not set'}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Bio</label>
+              {profileLoading ? (
+                <div className="h-5 w-40 bg-dark-600 rounded animate-pulse" />
+              ) : isEditingProfile ? (
+                <textarea
+                  value={profileData.bio}
+                  onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
+                  className="input-field text-sm py-1.5 resize-none"
+                  placeholder="Tell us about yourself..."
+                  rows={3}
+                  maxLength={200}
+                />
+              ) : (
+                <p className="text-sm text-gray-400">
+                  {profileData.bio || 'No bio yet'}
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Info Section */}
-      <div className="glass-card p-6">
-        <div className="flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-accent-orange mt-0.5" />
+      {/* Connected Accounts */}
+      <div className="glass-card p-4">
+        <div className="flex items-center gap-2 mb-4">
+          <LinkIcon className="w-4 h-4 text-primary-400" />
+          <h2 className="font-semibold">Connected Accounts</h2>
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between p-3 bg-dark-700/50 rounded-lg">
+            <div className="flex items-center gap-3">
+              <Github className="w-5 h-5" />
+              <div>
+                <p className="text-sm font-medium">GitHub</p>
+                <p className="text-xs text-gray-500">
+                  {hasGithubLinked ? 'Connected' : 'Not connected'}
+                </p>
+              </div>
+            </div>
+            
+            {hasGithubLinked ? (
+              <button
+                onClick={handleUnlinkGitHub}
+                disabled={unlinkingGithub || linkedProviders.length <= 1}
+                className="text-xs px-3 py-1.5 rounded-lg bg-dark-600 text-gray-400 hover:text-white hover:bg-dark-500 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {unlinkingGithub ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Unlink className="w-3 h-3" />
+                )}
+                Unlink
+              </button>
+            ) : (
+              <button
+                onClick={handleLinkGitHub}
+                disabled={linkingGithub}
+                className="text-xs px-3 py-1.5 rounded-lg bg-primary-500/20 text-primary-400 hover:bg-primary-500/30 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {linkingGithub ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <LinkIcon className="w-3 h-3" />
+                )}
+                Link GitHub
+              </button>
+            )}
+          </div>
+
+          {hasGoogleLinked && (
+            <div className="flex items-center justify-between p-3 bg-dark-700/50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+                <div>
+                  <p className="text-sm font-medium">Google</p>
+                  <p className="text-xs text-gray-500">Connected</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 text-xs text-success">
+                <Check className="w-3 h-3" />
+                Linked
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Account Security */}
+      <div className="glass-card p-4">
+        <div className="flex items-center gap-2 mb-4">
+          <Shield className="w-4 h-4 text-amber-400" />
+          <h2 className="font-semibold">Account Security</h2>
+        </div>
+
+        <div className="flex items-center justify-between p-3 bg-dark-700/50 rounded-lg">
+          <div className="flex items-center gap-3">
+            <Key className="w-4 h-4 text-gray-400" />
+            <div>
+              <p className="text-sm font-medium">Password</p>
+              <p className="text-xs text-gray-500">
+                {isEmailUser 
+                  ? 'Change your account password' 
+                  : 'Managed by your OAuth provider'}
+              </p>
+            </div>
+          </div>
+          <button 
+            onClick={() => setChangePasswordModalOpen(true)}
+            className="text-xs px-3 py-1.5 rounded-lg bg-dark-600 text-gray-300 hover:text-white hover:bg-dark-500 transition-colors"
+          >
+            {isEmailUser ? 'Change' : 'View'}
+          </button>
+        </div>
+      </div>
+
+      {/* Account Management */}
+      <div className="glass-card p-4 border border-amber-500/10">
+        <div className="flex items-center gap-2 mb-4">
+          <Trash2 className="w-4 h-4 text-amber-500" />
+          <h2 className="font-semibold text-amber-500">Account Management</h2>
+        </div>
+
+        <div className="flex items-center justify-between p-3 bg-amber-500/5 rounded-lg">
           <div>
-            <h3 className="font-medium mb-1">About Data Storage</h3>
-            <p className="text-sm text-gray-400">
-              Your data is stored locally on the server in a JSON file. It's recommended to export 
-              backups regularly. Clearing data will create an automatic backup before deletion.
+            <p className="text-sm font-medium">Delete Account</p>
+            <p className="text-xs text-gray-500">
+              Permanently delete your account and all data
             </p>
           </div>
+          <button 
+            onClick={() => setDeleteModalOpen(true)}
+            className="text-xs px-3 py-1.5 rounded-lg bg-error/20 text-error hover:bg-error/30 transition-colors"
+          >
+            Delete
+          </button>
         </div>
       </div>
 
-      {/* Clear Data Confirmation */}
-      <ConfirmDialog
-        isOpen={clearConfirm}
-        onClose={() => setClearConfirm(false)}
-        onConfirm={handleClearData}
-        title="Clear All Data"
-        message="Are you sure you want to delete ALL your data? This includes all skills, projects, resources, and activity history. A backup will be created automatically, but this action cannot be easily undone."
-        confirmText="Yes, Clear Everything"
-        variant="danger"
+      {/* Modals */}
+      <DeleteAccountModal 
+        isOpen={deleteModalOpen} 
+        onClose={() => setDeleteModalOpen(false)} 
+      />
+      <ChangePasswordModal 
+        isOpen={changePasswordModalOpen} 
+        onClose={() => setChangePasswordModalOpen(false)} 
       />
     </div>
   );

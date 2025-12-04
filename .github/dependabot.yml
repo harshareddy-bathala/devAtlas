@@ -1,0 +1,98 @@
+version: 2
+updates:
+  # Client dependencies
+  - package-ecosystem: "npm"
+    directory: "/client"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    groups:
+      react:
+        patterns:
+          - "react"
+          - "react-*"
+          - "@types/react*"
+      testing:
+        patterns:
+          - "vitest"
+          - "@testing-library/*"
+          - "jsdom"
+          - "msw"
+      observability:
+        patterns:
+          - "@sentry/*"
+          - "posthog-js"
+          - "@vercel/*"
+      build:
+        patterns:
+          - "vite"
+          - "@vitejs/*"
+          - "tailwindcss"
+          - "postcss"
+          - "autoprefixer"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "client"
+
+  # Server dependencies
+  - package-ecosystem: "npm"
+    directory: "/server"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    groups:
+      firebase:
+        patterns:
+          - "firebase-admin"
+      security:
+        patterns:
+          - "helmet"
+          - "cors"
+          - "express-rate-limit"
+      observability:
+        patterns:
+          - "@sentry/*"
+      testing:
+        patterns:
+          - "vitest"
+          - "supertest"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "server"
+
+  # Root dependencies
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "root"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(ci)"
+    labels:
+      - "dependencies"
+      - "ci"

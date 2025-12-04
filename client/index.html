@@ -5,9 +5,37 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DevOrbit - Personal Knowledge Hub</title>
+    
+    <!-- Preconnect to external domains for faster loading -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+    <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin>
+    
+    <!-- DNS prefetch for analytics -->
+    <link rel="dns-prefetch" href="https://app.posthog.com">
+    
+    <!-- Fonts with display swap for better FCP -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Modulepreload hints for critical vendor chunks (production only) -->
+    <script type="module">
+      // Dynamically add modulepreload for vendor chunks after build
+      if (import.meta.env.PROD) {
+        const preloadModules = [
+          '/assets/react-vendor.js',
+          '/assets/firebase.js',
+        ];
+        preloadModules.forEach(href => {
+          const link = document.createElement('link');
+          link.rel = 'modulepreload';
+          link.href = href;
+          // Silent fail if chunk names differ
+          link.onerror = () => {};
+          document.head.appendChild(link);
+        });
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

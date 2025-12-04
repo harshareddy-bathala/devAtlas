@@ -11,7 +11,25 @@
     "start": "node server/index.js",
     "server:dev": "cd server && npm run dev",
     "client:dev": "cd client && npm run dev",
-    "install-all": "npm install && cd client && npm install && cd ../server && npm install"
+    "install-all": "npm install && cd client && npm install && cd ../server && npm install",
+    "lint": "npm run lint:client && npm run lint:server",
+    "lint:client": "cd client && npm run lint",
+    "lint:server": "cd server && npm run lint",
+    "typecheck": "cd client && npm run typecheck",
+    "test": "npm run test:client && npm run test:server",
+    "test:client": "cd client && npx vitest run",
+    "test:server": "cd server && npx vitest run",
+    "test:watch": "concurrently \"npm run test:client:watch\" \"npm run test:server:watch\"",
+    "test:client:watch": "cd client && npx vitest",
+    "test:server:watch": "cd server && npx vitest",
+    "test:coverage": "npm run test:client:coverage && npm run test:server:coverage",
+    "test:client:coverage": "cd client && npx vitest run --coverage",
+    "test:server:coverage": "cd server && npx vitest run --coverage",
+    "test:e2e": "npx playwright test",
+    "test:e2e:ui": "npx playwright test --ui",
+    "test:e2e:debug": "npx playwright test --debug",
+    "test:e2e:headed": "npx playwright test --headed",
+    "test:e2e:report": "npx playwright show-report"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

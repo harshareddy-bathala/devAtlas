@@ -1,4 +1,6 @@
 const admin = require('firebase-admin');
+const fs = require('fs');
+const path = require('path');
 
 // Initialize Firebase Admin SDK
 let app;
@@ -8,10 +10,55 @@ let auth;
 function initializeFirebase() {
   if (app) return { db, auth };
 
-  // Use service account from environment variable or file
-  const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT
-    ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
-    : require('./serviceAccountKey.json');
+  let serviceAccount;
+  const isDev = process.env.NODE_ENV !== 'production';
+
+  // Try to get service account from environment variable first (RECOMMENDED)
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    try {
+      serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+      console.log('🔐 Using Firebase service account from environment variable');
+    } catch (parseError) {
+      console.error('❌ Failed to parse FIREBASE_SERVICE_ACCOUNT environment variable');
+      console.error('   Make sure it contains valid JSON');
+      process.exit(1);
+    }
+  } else {
+    // Fall back to file-based auth for local development ONLY
+    const serviceAccountPath = path.join(__dirname, 'serviceAccountKey.json');
+    if (fs.existsSync(serviceAccountPath)) {
+      serviceAccount = require('./serviceAccountKey.json');
+      
+      // Show warning in dev mode about using file-based auth
+      if (isDev) {
+        console.warn('');
+        console.warn('⚠️  WARNING: Using file-based Firebase authentication');
+        console.warn('   This is acceptable for local development, but for production:');
+        console.warn('   1. Set FIREBASE_SERVICE_ACCOUNT environment variable');
+        console.warn('   2. Never commit serviceAccountKey.json to version control');
+        console.warn('   3. See SECURITY.md for proper configuration');
+        console.warn('');
+      } else {
+        // In production, strongly warn about file-based auth
+        console.error('');
+        console.error('🚨 SECURITY WARNING: Using file-based Firebase authentication in production!');
+        console.error('   This is NOT recommended. Please set FIREBASE_SERVICE_ACCOUNT env variable.');
+        console.error('   See SECURITY.md for proper production configuration.');
+        console.error('');
+      }
+    } else {
+      console.error('❌ Firebase service account not found!');
+      console.error('   Please either:');
+      console.error('   1. Set FIREBASE_SERVICE_ACCOUNT env variable with the JSON content (RECOMMENDED)');
+      console.error('   2. Create server/serviceAccountKey.json file (local dev only)');
+      console.error('');
+      console.error('   Get the service account key from:');
+      console.error('   Firebase Console → Project Settings → Service Accounts → Generate new private key');
+      console.error('');
+      console.error('   See SECURITY.md for detailed setup instructions.');
+      process.exit(1);
+    }
+  }
 
   app = admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
@@ -21,12 +68,25 @@ function initializeFirebase() {
   db = admin.firestore();
   auth = admin.auth();
 
-  // Enable offline persistence settings
+  // Configure Firestore settings
   db.settings({
     ignoreUndefinedProperties: true
   });
 
   console.log('🔥 Firebase initialized successfully');
+  console.log(`📁 Project ID: ${serviceAccount.project_id}`);
+  
+  // Test Firestore connection
+  db.collection('_health_check').limit(1).get()
+    .then(() => console.log('✅ Firestore connection verified'))
+    .catch(err => {
+      console.error('❌ Firestore connection failed:', err.message);
+      console.error('   Make sure:');
+      console.error('   1. Firestore database is created in Firebase Console');
+      console.error('   2. Database is in Native mode (not Datastore mode)');
+      console.error('   3. Service account has Firestore permissions');
+    });
+    
   return { db, auth };
 }
 
@@ -49,7 +109,19 @@ async function verifyIdToken(idToken) {
     const decodedToken = await auth.verifyIdToken(idToken);
     return decodedToken;
   } catch (error) {
-    console.error('Token verification failed:', error.message);
+    console.error('Token verification failed:', error.code || 'NO_CODE', '-', error.message);
+    
+    // Provide more specific error messages
+    if (error.code === 'auth/id-token-expired') {
+      throw new Error('Token expired. Please sign in again.');
+    }
+    if (error.code === 'auth/argument-error') {
+      throw new Error('Invalid token format');
+    }
+    if (error.code === 'auth/id-token-revoked') {
+      throw new Error('Token has been revoked. Please sign in again.');
+    }
+    
     throw new Error('Invalid or expired token');
   }
 }

@@ -1,12 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
-import { Plus, Edit2, Trash2, X, ExternalLink, FileText, Video, BookOpen, Code, Link as LinkIcon } from 'lucide-react';
+import { Plus, Edit2, Trash2, ExternalLink, FileText, Video, BookOpen, Code, Link as LinkIcon, LayoutGrid, List } from 'lucide-react';
 import api from '../utils/api';
 import { PageLoader, LoadingButton } from '../components/LoadingStates';
 import ConfirmDialog from '../components/ConfirmDialog';
+import { Modal, VirtualList } from '../components/common';
+import { useVirtualization } from '../hooks';
 
 // Validation schema
 const resourceFormSchema = z.object({
@@ -27,6 +29,133 @@ const TYPE_CONFIG = {
   other: { label: 'Other', icon: LinkIcon, color: 'text-gray-400' }
 };
 
+// Resource Card Component (for grid view)
+function ResourceCard({ resource, onEdit, onDelete, getDomain }) {
+  const typeConfig = TYPE_CONFIG[resource.type] || TYPE_CONFIG.other;
+  const Icon = typeConfig.icon;
+  
+  return (
+    <div className="glass-card p-4 group hover:border-dark-500 transition-colors">
+      <div className="flex items-start justify-between mb-3">
+        <div className="p-2 rounded-lg bg-dark-600">
+          <Icon className={`w-4 h-4 ${typeConfig.color}`} />
+        </div>
+        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+          <button 
+            onClick={() => onEdit(resource)}
+            className="p-1.5 hover:bg-dark-500 rounded"
+          >
+            <Edit2 className="w-3.5 h-3.5 text-gray-400" />
+          </button>
+          <button 
+            onClick={() => onDelete(resource)}
+            className="p-1.5 hover:bg-red-500/20 rounded"
+          >
+            <Trash2 className="w-3.5 h-3.5 text-red-400" />
+          </button>
+        </div>
+      </div>
+      
+      <h3 className="font-medium mb-1 line-clamp-2">{resource.title}</h3>
+      <p className="text-xs text-gray-500 mb-3">{getDomain(resource.url)}</p>
+      
+      {resource.notes && (
+        <p className="text-sm text-gray-400 mb-3 line-clamp-2">{resource.notes}</p>
+      )}
+      
+      {/* Tags */}
+      <div className="flex flex-wrap gap-1 mb-3">
+        {resource.skill_name && (
+          <span className="text-xs px-2 py-0.5 bg-accent-blue/20 text-accent-blue rounded-full">
+            {resource.skill_name}
+          </span>
+        )}
+        {resource.project_name && (
+          <span className="text-xs px-2 py-0.5 bg-accent-purple/20 text-accent-purple rounded-full">
+            {resource.project_name}
+          </span>
+        )}
+      </div>
+      
+      <a 
+        href={resource.url} 
+        target="_blank" 
+        rel="noopener noreferrer"
+        className="flex items-center gap-1 text-sm text-accent-cyan hover:text-accent-blue transition-colors"
+      >
+        <ExternalLink className="w-4 h-4" />
+        Open Resource
+      </a>
+    </div>
+  );
+}
+
+// Resource List Item Component (for list view - virtualized)
+function ResourceListItem({ resource, onEdit, onDelete, getDomain }) {
+  const typeConfig = TYPE_CONFIG[resource.type] || TYPE_CONFIG.other;
+  const Icon = typeConfig.icon;
+  
+  return (
+    <div className="flex items-center gap-4 p-4 hover:bg-dark-700/50 transition-colors group h-[120px]">
+      <div className="p-2 rounded-lg bg-dark-600 shrink-0">
+        <Icon className={`w-5 h-5 ${typeConfig.color}`} />
+      </div>
+      
+      <div className="flex-1 min-w-0">
+        <h3 className="font-medium truncate">{resource.title}</h3>
+        <p className="text-xs text-gray-500">{getDomain(resource.url)}</p>
+        
+        {resource.notes && (
+          <p className="text-sm text-gray-400 mt-1 line-clamp-1">{resource.notes}</p>
+        )}
+        
+        {/* Tags */}
+        <div className="flex flex-wrap gap-1 mt-2">
+          <span className={`text-xs px-2 py-0.5 rounded-full ${typeConfig.color.replace('text-', 'bg-').replace('-cyan', '-cyan/20').replace('-blue', '-blue/20').replace('-orange', '-orange/20').replace('-purple', '-purple/20').replace('-green', '-green/20').replace('-gray-400', '-gray-500/20')} ${typeConfig.color}`}>
+            {typeConfig.label}
+          </span>
+          {resource.skill_name && (
+            <span className="text-xs px-2 py-0.5 bg-accent-blue/20 text-accent-blue rounded-full">
+              {resource.skill_name}
+            </span>
+          )}
+          {resource.project_name && (
+            <span className="text-xs px-2 py-0.5 bg-accent-purple/20 text-accent-purple rounded-full">
+              {resource.project_name}
+            </span>
+          )}
+        </div>
+      </div>
+      
+      <div className="flex items-center gap-2 shrink-0">
+        <a 
+          href={resource.url} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="p-2 hover:bg-dark-600 rounded-lg transition-colors"
+          title="Open Resource"
+        >
+          <ExternalLink className="w-4 h-4 text-accent-cyan" />
+        </a>
+        <button 
+          onClick={() => onEdit(resource)}
+          className="p-2 hover:bg-dark-600 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+          title="Edit"
+        >
+          <Edit2 className="w-4 h-4 text-gray-400" />
+        </button>
+        <button 
+          onClick={() => onDelete(resource)}
+          className="p-2 hover:bg-red-500/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+          title="Delete"
+        >
+          <Trash2 className="w-4 h-4 text-red-400" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function Resources() {
   const [resources, setResources] = useState([]);
   const [skills, setSkills] = useState([]);
@@ -36,7 +165,9 @@ function Resources() {
   const [showModal, setShowModal] = useState(false);
   const [editingResource, setEditingResource] = useState(null);
   const [filter, setFilter] = useState('all');
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, resource: null });
+  const dataFetched = useRef(false);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm({
     resolver: zodResolver(resourceFormSchema),
@@ -68,6 +199,8 @@ function Resources() {
   }, []);
 
   useEffect(() => {
+    if (dataFetched.current) return;
+    dataFetched.current = true;
     loadData();
   }, [loadData]);
 
@@ -137,6 +270,20 @@ function Resources() {
     ? resources 
     : resources.filter(r => r.type === filter);
 
+  // Determine if virtualization should be used (for list view with many items)
+  const { shouldVirtualize, virtualListConfig } = useVirtualization(filteredResources, {
+    threshold: 50,
+    itemHeight: 120, // Approximate height of a resource list item
+    overscan: 5
+  });
+
+  // Auto-switch to list view if there are many resources
+  useEffect(() => {
+    if (filteredResources.length > 100 && viewMode === 'grid') {
+      setViewMode('list');
+    }
+  }, [filteredResources.length, viewMode]);
+
   const getDomain = (url) => {
     try {
       return new URL(url).hostname.replace('www.', '');
@@ -164,207 +311,218 @@ function Resources() {
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex gap-2 flex-wrap">
-        <button
-          onClick={() => setFilter('all')}
-          className={`px-4 py-2 rounded-lg text-sm transition-colors ${
-            filter === 'all' 
-              ? 'bg-accent-purple text-white' 
-              : 'bg-dark-700 text-gray-400 hover:text-white'
-          }`}
-        >
-          All ({resources.length})
-        </button>
-        {Object.entries(TYPE_CONFIG).map(([type, config]) => {
-          const count = resources.filter(r => r.type === type).length;
-          if (count === 0) return null;
-          const Icon = config.icon;
-          return (
-            <button
-              key={type}
-              onClick={() => setFilter(type)}
-              className={`px-4 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 ${
-                filter === type 
-                  ? 'bg-accent-purple text-white' 
-                  : 'bg-dark-700 text-gray-400 hover:text-white'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              {config.label} ({count})
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Resources Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredResources.map(resource => {
-          const typeConfig = TYPE_CONFIG[resource.type] || TYPE_CONFIG.other;
-          const Icon = typeConfig.icon;
-          
-          return (
-            <div 
-              key={resource.id} 
-              className="glass-card p-4 group hover:border-dark-500 transition-colors"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className={`p-2 rounded-lg bg-dark-600`}>
-                  <Icon className={`w-4 h-4 ${typeConfig.color}`} />
-                </div>
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-                  <button 
-                    onClick={() => openModal(resource)}
-                    className="p-1.5 hover:bg-dark-500 rounded"
-                  >
-                    <Edit2 className="w-3.5 h-3.5 text-gray-400" />
-                  </button>
-                  <button 
-                    onClick={() => setDeleteConfirm({ open: true, resource })}
-                    className="p-1.5 hover:bg-red-500/20 rounded"
-                  >
-                    <Trash2 className="w-3.5 h-3.5 text-red-400" />
-                  </button>
-                </div>
-              </div>
-              
-              <h3 className="font-medium mb-1 line-clamp-2">{resource.title}</h3>
-              <p className="text-xs text-gray-500 mb-3">{getDomain(resource.url)}</p>
-              
-              {resource.notes && (
-                <p className="text-sm text-gray-400 mb-3 line-clamp-2">{resource.notes}</p>
-              )}
-              
-              {/* Tags */}
-              <div className="flex flex-wrap gap-1 mb-3">
-                {resource.skill_name && (
-                  <span className="text-xs px-2 py-0.5 bg-accent-blue/20 text-accent-blue rounded-full">
-                    {resource.skill_name}
-                  </span>
-                )}
-                {resource.project_name && (
-                  <span className="text-xs px-2 py-0.5 bg-accent-purple/20 text-accent-purple rounded-full">
-                    {resource.project_name}
-                  </span>
-                )}
-              </div>
-              
-              <a 
-                href={resource.url} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 text-sm text-accent-cyan hover:text-accent-blue transition-colors"
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={() => setFilter('all')}
+            className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+              filter === 'all' 
+                ? 'bg-accent-purple text-white' 
+                : 'bg-dark-700 text-gray-400 hover:text-white'
+            }`}
+          >
+            All ({resources.length})
+          </button>
+          {Object.entries(TYPE_CONFIG).map(([type, config]) => {
+            const count = resources.filter(r => r.type === type).length;
+            if (count === 0) return null;
+            const Icon = config.icon;
+            return (
+              <button
+                key={type}
+                onClick={() => setFilter(type)}
+                className={`px-4 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 ${
+                  filter === type 
+                    ? 'bg-accent-purple text-white' 
+                    : 'bg-dark-700 text-gray-400 hover:text-white'
+                }`}
               >
-                <ExternalLink className="w-4 h-4" />
-                Open Resource
-              </a>
-            </div>
-          );
-        })}
+                <Icon className="w-4 h-4" />
+                {config.label} ({count})
+              </button>
+            );
+          })}
+        </div>
         
-        {filteredResources.length === 0 && (
-          <div className="col-span-full text-center py-12 text-gray-500">
-            <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>No resources found</p>
-            <p className="text-sm">Start building your learning library</p>
-          </div>
-        )}
+        {/* View Mode Toggle */}
+        <div className="flex gap-1 bg-dark-700 rounded-lg p-1">
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`p-2 rounded transition-colors ${
+              viewMode === 'grid' 
+                ? 'bg-dark-600 text-white' 
+                : 'text-gray-400 hover:text-white'
+            }`}
+            title="Grid view"
+          >
+            <LayoutGrid className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`p-2 rounded transition-colors ${
+              viewMode === 'list' 
+                ? 'bg-dark-600 text-white' 
+                : 'text-gray-400 hover:text-white'
+            }`}
+            title="List view (virtualized for large datasets)"
+          >
+            <List className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
-      {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="glass-card w-full max-w-lg p-6 m-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold">
-                {editingResource ? 'Edit Resource' : 'Add Resource'}
-              </h2>
-              <button onClick={closeModal} className="p-2 hover:bg-dark-600 rounded-lg">
-                <X className="w-5 h-5" />
-              </button>
+      {/* Resources View */}
+      {viewMode === 'grid' ? (
+        // Grid View
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredResources.map(resource => (
+            <ResourceCard 
+              key={resource.id} 
+              resource={resource} 
+              onEdit={openModal} 
+              onDelete={(r) => setDeleteConfirm({ open: true, resource: r })}
+              getDomain={getDomain}
+            />
+          ))}
+          
+          {filteredResources.length === 0 && (
+            <div className="col-span-full text-center py-12 text-gray-500">
+              <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>No resources found</p>
+              <p className="text-sm">Start building your learning library</p>
             </div>
-            
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Title</label>
-                <input
-                  type="text"
-                  {...register('title')}
-                  className={`input-field ${errors.title ? 'border-red-500 focus:ring-red-500' : ''}`}
-                  placeholder="React Documentation"
+          )}
+        </div>
+      ) : (
+        // List View (virtualized for large datasets)
+        <div className="glass-card overflow-hidden">
+          {shouldVirtualize && virtualListConfig ? (
+            <VirtualList
+              items={filteredResources}
+              itemHeight={virtualListConfig.itemHeight}
+              overscan={virtualListConfig.overscan}
+              className="h-[600px]"
+              keyExtractor={(item) => item.id}
+              renderItem={(resource) => (
+                <ResourceListItem 
+                  resource={resource} 
+                  onEdit={openModal} 
+                  onDelete={(r) => setDeleteConfirm({ open: true, resource: r })}
+                  getDomain={getDomain}
                 />
-                {errors.title && (
-                  <p className="text-red-400 text-xs mt-1">{errors.title.message}</p>
-                )}
-              </div>
-              
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">URL</label>
-                <input
-                  type="url"
-                  {...register('url')}
-                  className={`input-field ${errors.url ? 'border-red-500 focus:ring-red-500' : ''}`}
-                  placeholder="https://react.dev"
+              )}
+            />
+          ) : (
+            <div className="divide-y divide-dark-600">
+              {filteredResources.map(resource => (
+                <ResourceListItem 
+                  key={resource.id}
+                  resource={resource} 
+                  onEdit={openModal} 
+                  onDelete={(r) => setDeleteConfirm({ open: true, resource: r })}
+                  getDomain={getDomain}
                 />
-                {errors.url && (
-                  <p className="text-red-400 text-xs mt-1">{errors.url.message}</p>
-                )}
-              </div>
-              
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Type</label>
-                <select {...register('type')} className="input-field">
-                  {Object.entries(TYPE_CONFIG).map(([value, { label }]) => (
-                    <option key={value} value={value}>{label}</option>
-                  ))}
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Link to Skill (optional)</label>
-                <select {...register('skillId')} className="input-field">
-                  <option value="">None</option>
-                  {skills.map(skill => (
-                    <option key={skill.id} value={skill.id}>
-                      {skill.icon} {skill.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Link to Project (optional)</label>
-                <select {...register('projectId')} className="input-field">
-                  <option value="">None</option>
-                  {projects.map(project => (
-                    <option key={project.id} value={project.id}>{project.name}</option>
-                  ))}
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Notes</label>
-                <textarea
-                  {...register('notes')}
-                  className={`input-field min-h-[80px] resize-none ${errors.notes ? 'border-red-500 focus:ring-red-500' : ''}`}
-                  placeholder="What did you learn from this resource?"
-                />
-                {errors.notes && (
-                  <p className="text-red-400 text-xs mt-1">{errors.notes.message}</p>
-                )}
-              </div>
-              
-              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={closeModal} className="btn-secondary flex-1">
-                  Cancel
-                </button>
-                <LoadingButton type="submit" loading={saving} className="btn-primary flex-1">
-                  {editingResource ? 'Update' : 'Add'} Resource
-                </LoadingButton>
-              </div>
-            </form>
-          </div>
+              ))}
+            </div>
+          )}
+          
+          {filteredResources.length === 0 && (
+            <div className="text-center py-12 text-gray-500">
+              <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>No resources found</p>
+              <p className="text-sm">Start building your learning library</p>
+            </div>
+          )}
         </div>
       )}
+
+      {/* Modal */}
+      <Modal
+        isOpen={showModal}
+        onClose={closeModal}
+        title={editingResource ? 'Edit Resource' : 'Add Resource'}
+        size="md"
+      >
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Title</label>
+            <input
+              type="text"
+              {...register('title')}
+              className={`input-field ${errors.title ? 'border-red-500 focus:ring-red-500' : ''}`}
+              placeholder="React Documentation"
+            />
+            {errors.title && (
+              <p className="text-red-400 text-xs mt-1">{errors.title.message}</p>
+            )}
+          </div>
+          
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">URL</label>
+            <input
+              type="url"
+              {...register('url')}
+              className={`input-field ${errors.url ? 'border-red-500 focus:ring-red-500' : ''}`}
+              placeholder="https://react.dev"
+            />
+            {errors.url && (
+              <p className="text-red-400 text-xs mt-1">{errors.url.message}</p>
+            )}
+          </div>
+          
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Type</label>
+            <select {...register('type')} className="input-field">
+              {Object.entries(TYPE_CONFIG).map(([value, { label }]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Link to Skill (optional)</label>
+            <select {...register('skillId')} className="input-field">
+              <option value="">None</option>
+              {skills.map(skill => (
+                <option key={skill.id} value={skill.id}>
+                  {skill.icon} {skill.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Link to Project (optional)</label>
+            <select {...register('projectId')} className="input-field">
+              <option value="">None</option>
+              {projects.map(project => (
+                <option key={project.id} value={project.id}>{project.name}</option>
+              ))}
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Notes</label>
+            <textarea
+              {...register('notes')}
+              className={`input-field min-h-[80px] resize-none ${errors.notes ? 'border-red-500 focus:ring-red-500' : ''}`}
+              placeholder="What did you learn from this resource?"
+            />
+            {errors.notes && (
+              <p className="text-red-400 text-xs mt-1">{errors.notes.message}</p>
+            )}
+          </div>
+          
+          <div className="flex gap-3 pt-4">
+            <button type="button" onClick={closeModal} className="btn-secondary flex-1">
+              Cancel
+            </button>
+            <LoadingButton type="submit" loading={saving} className="btn-primary flex-1">
+              {editingResource ? 'Update' : 'Add'} Resource
+            </LoadingButton>
+          </div>
+        </form>
+      </Modal>
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog

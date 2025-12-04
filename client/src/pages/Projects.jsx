@@ -1,12 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
-import { Plus, Edit2, Trash2, X, Github, ExternalLink, Lightbulb, Rocket, CheckCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, Github, ExternalLink, Lightbulb, Rocket, CheckCircle } from 'lucide-react';
 import api from '../utils/api';
 import { PageLoader, LoadingButton } from '../components/LoadingStates';
 import ConfirmDialog from '../components/ConfirmDialog';
+import Pagination from '../components/Pagination.tsx';
+import { Modal } from '../components/common';
 
 // Validation schema
 const projectFormSchema = z.object({
@@ -46,6 +48,11 @@ function Projects() {
   const [showModal, setShowModal] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, project: null });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [usePagination, setUsePagination] = useState(false);
+  const dataFetched = useRef(false);
+  const ITEMS_PER_PAGE = 12;
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm({
     resolver: zodResolver(projectFormSchema),
@@ -59,20 +66,46 @@ function Projects() {
     }
   });
 
-  const loadProjects = useCallback(async () => {
+  const loadProjects = useCallback(async (page = 1) => {
     try {
-      const data = await api.getProjects();
-      setProjects(data);
+      // Use pagination for large datasets
+      if (usePagination) {
+        const response = await api.getProjects({ page, limit: ITEMS_PER_PAGE });
+        if (response.pagination) {
+          setProjects(response.items || response);
+          setTotalPages(response.pagination.totalPages);
+          setCurrentPage(response.pagination.page);
+        } else {
+          setProjects(Array.isArray(response) ? response : response.items || []);
+        }
+      } else {
+        // Fetch all projects (for kanban view)
+        const data = await api.getProjects();
+        const projectList = Array.isArray(data) ? data : (data.items || []);
+        setProjects(projectList);
+        
+        // Enable pagination if we have many projects
+        if (projectList.length > 50) {
+          setUsePagination(true);
+        }
+      }
     } catch (error) {
       toast.error(error.message || 'Failed to load projects');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [usePagination]);
 
   useEffect(() => {
-    loadProjects();
-  }, [loadProjects]);
+    if (dataFetched.current) return;
+    dataFetched.current = true;
+    loadProjects(currentPage);
+  }, [loadProjects, currentPage]);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    loadProjects(page);
+  };
 
   const openModal = (project = null) => {
     if (project) {
@@ -106,6 +139,17 @@ function Projects() {
   };
 
   const onSubmit = async (data) => {
+    // Validate: completed projects must have at least one link
+    if (data.status === 'completed') {
+      const hasGithubUrl = data.githubUrl && data.githubUrl.trim() !== '';
+      const hasDemoUrl = data.demoUrl && data.demoUrl.trim() !== '';
+      
+      if (!hasGithubUrl && !hasDemoUrl) {
+        toast.error('Completed projects require a GitHub URL or Demo URL');
+        return;
+      }
+    }
+    
     setSaving(true);
     try {
       if (editingProject) {
@@ -115,7 +159,7 @@ function Projects() {
         await api.createProject(data);
         toast.success('Project created successfully');
       }
-      loadProjects();
+      loadProjects(currentPage);
       closeModal();
     } catch (error) {
       toast.error(error.message || 'Failed to save project');
@@ -130,14 +174,37 @@ function Projects() {
     try {
       await api.deleteProject(deleteConfirm.project.id);
       toast.success('Project deleted successfully');
-      loadProjects();
+      loadProjects(currentPage);
     } catch (error) {
       toast.error(error.message || 'Failed to delete project');
     }
   };
 
   const handleStatusChange = async (project, newStatus) => {
+    // Don't do anything if already in this status
+    if (project.status === newStatus) return;
+    
+    // If moving to completed, require at least one link (repo or demo)
+    if (newStatus === 'completed') {
+      const hasGithubUrl = project.github_url && project.github_url.trim() !== '';
+      const hasDemoUrl = project.demo_url && project.demo_url.trim() !== '';
+      
+      if (!hasGithubUrl && !hasDemoUrl) {
+        // Show toast and open edit modal for the project
+        toast.error('Add a GitHub URL or Demo URL to mark as completed');
+        openModal(project);
+        return;
+      }
+    }
+    
+    // Optimistic update - update UI immediately
+    const previousProjects = [...projects];
+    setProjects(projects.map(p => 
+      p.id === project.id ? { ...p, status: newStatus } : p
+    ));
+    
     try {
+      // Sync with server in background
       await api.updateProject(project.id, { 
         name: project.name,
         description: project.description,
@@ -147,8 +214,9 @@ function Projects() {
         techStack: project.tech_stack
       });
       toast.success(`Moved to ${STATUS_CONFIG[newStatus].label}`);
-      loadProjects();
     } catch (error) {
+      // Rollback on error
+      setProjects(previousProjects);
       toast.error(error.message || 'Failed to update project status');
     }
   };
@@ -297,110 +365,102 @@ function Projects() {
       </div>
 
       {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="glass-card w-full max-w-lg p-6 m-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold">
-                {editingProject ? 'Edit Project' : 'New Project'}
-              </h2>
-              <button onClick={closeModal} className="p-2 hover:bg-dark-600 rounded-lg">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Project Name</label>
-                <input
-                  type="text"
-                  {...register('name')}
-                  className={`input-field ${errors.name ? 'border-red-500 focus:ring-red-500' : ''}`}
-                  placeholder="My Awesome Project"
-                />
-                {errors.name && (
-                  <p className="text-red-400 text-xs mt-1">{errors.name.message}</p>
-                )}
-              </div>
-              
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Description</label>
-                <textarea
-                  {...register('description')}
-                  className={`input-field min-h-[80px] resize-none ${errors.description ? 'border-red-500 focus:ring-red-500' : ''}`}
-                  placeholder="Brief description of your project..."
-                />
-                {errors.description && (
-                  <p className="text-red-400 text-xs mt-1">{errors.description.message}</p>
-                )}
-              </div>
-              
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Status</label>
-                <select {...register('status')} className="input-field">
-                  {Object.entries(STATUS_CONFIG).map(([value, { label }]) => (
-                    <option key={value} value={value}>{label}</option>
-                  ))}
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">
-                  <Github className="w-4 h-4 inline mr-1" />
-                  GitHub URL
-                </label>
-                <input
-                  type="url"
-                  {...register('githubUrl')}
-                  className={`input-field ${errors.githubUrl ? 'border-red-500 focus:ring-red-500' : ''}`}
-                  placeholder="https://github.com/username/repo"
-                />
-                {errors.githubUrl && (
-                  <p className="text-red-400 text-xs mt-1">{errors.githubUrl.message}</p>
-                )}
-              </div>
-              
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">
-                  <ExternalLink className="w-4 h-4 inline mr-1" />
-                  Demo URL
-                </label>
-                <input
-                  type="url"
-                  {...register('demoUrl')}
-                  className={`input-field ${errors.demoUrl ? 'border-red-500 focus:ring-red-500' : ''}`}
-                  placeholder="https://my-project.vercel.app"
-                />
-                {errors.demoUrl && (
-                  <p className="text-red-400 text-xs mt-1">{errors.demoUrl.message}</p>
-                )}
-              </div>
-              
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Tech Stack</label>
-                <input
-                  type="text"
-                  {...register('techStack')}
-                  className={`input-field ${errors.techStack ? 'border-red-500 focus:ring-red-500' : ''}`}
-                  placeholder="React, Node.js, PostgreSQL (comma-separated)"
-                />
-                {errors.techStack && (
-                  <p className="text-red-400 text-xs mt-1">{errors.techStack.message}</p>
-                )}
-              </div>
-              
-              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={closeModal} className="btn-secondary flex-1">
-                  Cancel
-                </button>
-                <LoadingButton type="submit" loading={saving} className="btn-primary flex-1">
-                  {editingProject ? 'Update' : 'Create'} Project
-                </LoadingButton>
-              </div>
-            </form>
+      <Modal
+        isOpen={showModal}
+        onClose={closeModal}
+        title={editingProject ? 'Edit Project' : 'New Project'}
+        size="md"
+      >
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Project Name</label>
+            <input
+              type="text"
+              {...register('name')}
+              className={`input-field ${errors.name ? 'border-red-500 focus:ring-red-500' : ''}`}
+              placeholder="My Awesome Project"
+            />
+            {errors.name && (
+              <p className="text-red-400 text-xs mt-1">{errors.name.message}</p>
+            )}
           </div>
-        </div>
-      )}
+          
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Description</label>
+            <textarea
+              {...register('description')}
+              className={`input-field min-h-[80px] resize-none ${errors.description ? 'border-red-500 focus:ring-red-500' : ''}`}
+              placeholder="Brief description of your project..."
+            />
+            {errors.description && (
+              <p className="text-red-400 text-xs mt-1">{errors.description.message}</p>
+            )}
+          </div>
+          
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Status</label>
+            <select {...register('status')} className="input-field">
+              {Object.entries(STATUS_CONFIG).map(([value, { label }]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">
+              <Github className="w-4 h-4 inline mr-1" />
+              GitHub URL
+            </label>
+            <input
+              type="url"
+              {...register('githubUrl')}
+              className={`input-field ${errors.githubUrl ? 'border-red-500 focus:ring-red-500' : ''}`}
+              placeholder="https://github.com/username/repo"
+            />
+            {errors.githubUrl && (
+              <p className="text-red-400 text-xs mt-1">{errors.githubUrl.message}</p>
+            )}
+          </div>
+          
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">
+              <ExternalLink className="w-4 h-4 inline mr-1" />
+              Demo URL
+            </label>
+            <input
+              type="url"
+              {...register('demoUrl')}
+              className={`input-field ${errors.demoUrl ? 'border-red-500 focus:ring-red-500' : ''}`}
+              placeholder="https://my-project.vercel.app"
+            />
+            {errors.demoUrl && (
+              <p className="text-red-400 text-xs mt-1">{errors.demoUrl.message}</p>
+            )}
+          </div>
+          
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Tech Stack</label>
+            <input
+              type="text"
+              {...register('techStack')}
+              className={`input-field ${errors.techStack ? 'border-red-500 focus:ring-red-500' : ''}`}
+              placeholder="React, Node.js, PostgreSQL (comma-separated)"
+            />
+            {errors.techStack && (
+              <p className="text-red-400 text-xs mt-1">{errors.techStack.message}</p>
+            )}
+          </div>
+          
+          <div className="flex gap-3 pt-4">
+            <button type="button" onClick={closeModal} className="btn-secondary flex-1">
+              Cancel
+            </button>
+            <LoadingButton type="submit" loading={saving} className="btn-primary flex-1">
+              {editingProject ? 'Update' : 'Create'} Project
+            </LoadingButton>
+          </div>
+        </form>
+      </Modal>
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
@@ -412,6 +472,17 @@ function Projects() {
         confirmText="Delete"
         variant="danger"
       />
+
+      {/* Pagination - shown when pagination is enabled */}
+      {usePagination && totalPages > 1 && (
+        <div className="mt-8 flex justify-center">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -1,5 +1,12 @@
 const { z } = require('zod');
 
+// Helper to convert object to array (Firestore sometimes returns arrays as objects)
+const arrayOrObjectToArray = z.union([
+  z.array(z.string()),
+  z.object({}).transform(() => []),
+  z.record(z.string()).transform((obj) => Object.values(obj))
+]).optional().default([]);
+
 // Skill validation schema
 const skillSchema = z.object({
   name: z.string()
@@ -10,8 +17,9 @@ const skillSchema = z.object({
     .default('language'),
   status: z.enum(['want_to_learn', 'learning', 'mastered'])
     .default('want_to_learn'),
-  icon: z.string().max(10).default('📚')
-});
+  icon: z.string().max(50).optional().default('📚'),
+  linkedProjects: arrayOrObjectToArray
+}).passthrough(); // Allow extra fields like id, createdAt, updatedAt
 
 // Project validation schema
 const projectSchema = z.object({
@@ -36,8 +44,9 @@ const projectSchema = z.object({
   techStack: z.string()
     .max(500, 'Tech stack must be less than 500 characters')
     .optional()
-    .default('')
-});
+    .default(''),
+  linkedSkills: arrayOrObjectToArray
+}).passthrough(); // Allow extra fields like id, createdAt, updatedAt
 
 // Resource validation schema
 const resourceSchema = z.object({
@@ -79,15 +88,98 @@ const activitySchema = z.object({
     .transform(val => val ? parseInt(val) || null : null)
 });
 
-// ID parameter validation
+// ID parameter validation - supports both numeric IDs and Firestore document IDs
 const idParamSchema = z.object({
-  id: z.string().regex(/^\d+$/, 'Invalid ID format')
+  id: z.string().min(1, 'ID is required').max(100, 'ID too long')
 });
+
+// Profile validation schema - for PUT /api/v1/profile
+const profileSchema = z.object({
+  displayName: z.string()
+    .min(1, 'Display name is required')
+    .max(100, 'Display name must be less than 100 characters')
+    .trim(),
+  username: z.string()
+    .min(3, 'Username must be at least 3 characters')
+    .max(20, 'Username must be less than 20 characters')
+    .regex(/^[a-z0-9_]+$/, 'Username must contain only lowercase letters, numbers, and underscores')
+    .optional(),
+  purpose: z.string()
+    .max(500, 'Purpose must be less than 500 characters')
+    .optional()
+    .default(''),
+  bio: z.string()
+    .max(1000, 'Bio must be less than 1000 characters')
+    .optional()
+    .default('')
+});
+
+// Import data validation schema - for validating imported data structure
+const importSkillSchema = z.object({
+  name: z.string().min(1).max(100).trim(),
+  category: z.enum(['language', 'framework', 'library', 'tool', 'database', 'runtime', 'other']).optional().default('language'),
+  status: z.enum(['want_to_learn', 'learning', 'mastered']).optional().default('want_to_learn'),
+  icon: z.string().max(50).optional().default('📚'),
+  linkedProjects: z.array(z.string()).optional().default([])
+}).strip(); // Strip unknown fields for import
+
+const importProjectSchema = z.object({
+  name: z.string().min(1).max(200).trim(),
+  description: z.string().max(2000).optional().default(''),
+  status: z.enum(['idea', 'active', 'completed']).optional().default('idea'),
+  githubUrl: z.string().url().optional().or(z.literal('')).default(''),
+  github_url: z.string().url().optional().or(z.literal('')).default(''), // Support both formats
+  demoUrl: z.string().url().optional().or(z.literal('')).default(''),
+  demo_url: z.string().url().optional().or(z.literal('')).default(''), // Support both formats
+  techStack: z.string().max(500).optional().default(''),
+  tech_stack: z.string().max(500).optional().default(''), // Support both formats
+  linkedSkills: z.array(z.string()).optional().default([])
+}).strip();
+
+const importResourceSchema = z.object({
+  title: z.string().min(1).max(300).trim(),
+  url: z.string().url().max(2000),
+  type: z.enum(['documentation', 'video', 'course', 'article', 'tutorial', 'other']).optional().default('article'),
+  skillId: z.string().nullable().optional(),
+  projectId: z.string().nullable().optional(),
+  notes: z.string().max(5000).optional().default('')
+}).strip();
+
+const importActivitySchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  count: z.number().int().min(0).max(1000).optional().default(1),
+  types: z.record(z.number().int().min(0)).optional().default({}),
+  lastActivity: z.string().max(1000).optional().default('')
+}).strip();
+
+// Full import data schema
+const importDataSchema = z.object({
+  skills: z.array(importSkillSchema).optional().default([]),
+  projects: z.array(importProjectSchema).optional().default([]),
+  resources: z.array(importResourceSchema).optional().default([]),
+  activities: z.array(importActivitySchema).optional().default([]),
+  // Profile is optional for backwards compatibility
+  profile: z.object({
+    displayName: z.string().max(100).optional(),
+    email: z.string().email().optional(),
+    photoURL: z.string().url().optional().nullable(),
+    createdAt: z.string().optional()
+  }).optional(),
+  exportedAt: z.string().optional(),
+  version: z.string().optional()
+}).strict(); // Strict mode - reject unknown fields at root level
 
 module.exports = {
   skillSchema,
   projectSchema,
   resourceSchema,
   activitySchema,
-  idParamSchema
+  idParamSchema,
+  profileSchema,
+  // Import schemas
+  importDataSchema,
+  importSkillSchema,
+  importProjectSchema,
+  importResourceSchema,
+  importActivitySchema
 };

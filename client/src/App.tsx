@@ -1,22 +1,37 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext.jsx';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { OnboardingProvider, useOnboarding } from './contexts/OnboardingContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import Layout from './components/Layout';
-import Dashboard from './pages/Dashboard';
-import StackTracker from './pages/StackTracker';
-import Projects from './pages/Projects';
-import Resources from './pages/Resources';
-import Settings from './pages/Settings';
-import LoginPage from './pages/Login';
 import { Loader2 } from 'lucide-react';
+
+// Lazy load page components for code splitting
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const StackTracker = lazy(() => import('./pages/StackTracker'));
+const Projects = lazy(() => import('./pages/Projects'));
+const Resources = lazy(() => import('./pages/Resources'));
+const Settings = lazy(() => import('./pages/Settings'));
+const LoginPage = lazy(() => import('./pages/Login'));
+const Onboarding = lazy(() => import('./pages/Onboarding'));
+
+// Page loader component for Suspense fallback
+function PageLoader() {
+  return (
+    <div className="min-h-[50vh] flex items-center justify-center">
+      <Loader2 className="w-8 h-8 animate-spin text-accent-blue" />
+    </div>
+  );
+}
 
 // Protected Route wrapper
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
+  const { isOnboarded, isChecking } = useOnboarding();
 
-  if (isLoading) {
+  if (isLoading || isChecking) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-dark-900">
         <Loader2 className="w-8 h-8 animate-spin text-accent-blue" />
@@ -28,14 +43,45 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" replace />;
   }
 
+  // Redirect to onboarding if not completed
+  if (!isOnboarded) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
   return <Layout>{children}</Layout>;
 }
 
-// Public Route wrapper (redirect to dashboard if already logged in)
+// Onboarding Route - only accessible if logged in but not onboarded
+function OnboardingRoute({ children }: { children: React.ReactNode }) {
+  const { user, isLoading } = useAuth();
+  const { isOnboarded, isChecking } = useOnboarding();
+
+  if (isLoading || isChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-dark-900">
+        <Loader2 className="w-8 h-8 animate-spin text-accent-blue" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // If already onboarded, go to dashboard
+  if (isOnboarded) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+// Public Route wrapper (redirect to appropriate page if already logged in)
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
+  const { isOnboarded, isChecking } = useOnboarding();
 
-  if (isLoading) {
+  if (isLoading || isChecking) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-dark-900">
         <Loader2 className="w-8 h-8 animate-spin text-accent-blue" />
@@ -44,6 +90,10 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (user) {
+    // Redirect to onboarding if not completed, otherwise dashboard
+    if (!isOnboarded) {
+      return <Navigate to="/onboarding" replace />;
+    }
     return <Navigate to="/" replace />;
   }
 
@@ -52,62 +102,74 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 
 function AppRoutes() {
   return (
-    <Routes>
-      {/* Public routes */}
-      <Route
-        path="/login"
-        element={
-          <PublicRoute>
-            <LoginPage />
-          </PublicRoute>
-        }
-      />
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
+        {/* Public routes */}
+        <Route
+          path="/login"
+          element={
+            <PublicRoute>
+              <LoginPage />
+            </PublicRoute>
+          }
+        />
 
-      {/* Protected routes */}
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/skills"
-        element={
-          <ProtectedRoute>
-            <StackTracker />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/projects"
-        element={
-          <ProtectedRoute>
-            <Projects />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/resources"
-        element={
-          <ProtectedRoute>
-            <Resources />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/settings"
-        element={
-          <ProtectedRoute>
-            <Settings />
-          </ProtectedRoute>
-        }
-      />
+        {/* Onboarding route */}
+        <Route
+          path="/onboarding"
+          element={
+            <OnboardingRoute>
+              <Onboarding />
+            </OnboardingRoute>
+          }
+        />
 
-      {/* Catch all - redirect to dashboard */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        {/* Protected routes */}
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/stack"
+          element={
+            <ProtectedRoute>
+              <StackTracker />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects"
+          element={
+            <ProtectedRoute>
+              <Projects />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/resources"
+          element={
+            <ProtectedRoute>
+              <Resources />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <Settings />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Catch all - redirect to dashboard */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
   );
 }
 
@@ -116,9 +178,15 @@ export default function App() {
     <ErrorBoundary>
       <ThemeProvider>
         <AuthProvider>
-          <BrowserRouter>
-            <AppRoutes />
-            <Toaster
+          <OnboardingProvider>
+            <BrowserRouter
+              future={{
+                v7_startTransition: true,
+                v7_relativeSplatPath: true,
+              }}
+            >
+              <AppRoutes />
+              <Toaster
               position="bottom-right"
               toastOptions={{
                 duration: 4000,
@@ -141,10 +209,11 @@ export default function App() {
                   },
                 },
               }}
-            />
+/>
           </BrowserRouter>
-        </AuthProvider>
-      </ThemeProvider>
-    </ErrorBoundary>
-  );
+        </OnboardingProvider>
+      </AuthProvider>
+    </ThemeProvider>
+  </ErrorBoundary>
+);
 }

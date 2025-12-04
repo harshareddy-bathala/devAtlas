@@ -1,12 +1,15 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
-import { Plus, Edit2, Trash2, X, Sparkles, BookOpen, Target } from 'lucide-react';
+import { Plus, Edit2, Trash2, Sparkles, BookOpen, Target, FolderCheck } from 'lucide-react';
 import api from '../utils/api';
 import { PageLoader, LoadingButton } from '../components/LoadingStates';
 import ConfirmDialog from '../components/ConfirmDialog';
+import RequireProjectLinkModal from '../components/RequireProjectLinkModal';
+import { skillEvents } from '../lib/analytics';
+import { Modal } from '../components/common';
 
 // Validation schema
 const skillFormSchema = z.object({
@@ -48,11 +51,14 @@ const ICON_OPTIONS = ['🟨', '🔷', '⚛️', '🟩', '🐍', '🦀', '🐳', 
 
 function StackTracker() {
   const [skills, setSkills] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingSkill, setEditingSkill] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, skill: null });
+  const [requireProjectModal, setRequireProjectModal] = useState({ open: false, skill: null });
+  const dataFetched = useRef(false);
 
   const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm({
     resolver: zodResolver(skillFormSchema),
@@ -68,8 +74,12 @@ function StackTracker() {
 
   const loadSkills = useCallback(async () => {
     try {
-      const data = await api.getSkills();
-      setSkills(data);
+      const [skillsData, projectsData] = await Promise.all([
+        api.getSkills(),
+        api.getProjects()
+      ]);
+      setSkills(skillsData);
+      setProjects(projectsData);
     } catch (error) {
       toast.error(error.message || 'Failed to load skills');
     } finally {
@@ -78,6 +88,8 @@ function StackTracker() {
   }, []);
 
   useEffect(() => {
+    if (dataFetched.current) return;
+    dataFetched.current = true;
     loadSkills();
   }, [loadSkills]);
 
@@ -104,13 +116,38 @@ function StackTracker() {
   };
 
   const onSubmit = async (data) => {
+    // Check if trying to set status to mastered and skill doesn't have linked completed project
+    if (data.status === 'mastered') {
+      const linkedProjects = editingSkill?.linkedProjects || [];
+      const completedProjectIds = projects.filter(p => p.status === 'completed').map(p => p.id);
+      const hasLinkedCompletedProject = linkedProjects.some(id => completedProjectIds.includes(id));
+      
+      if (!hasLinkedCompletedProject) {
+        // Close current modal and open require project modal
+        closeModal();
+        setRequireProjectModal({ 
+          open: true, 
+          skill: editingSkill ? { ...editingSkill, ...data } : { ...data, id: null }
+        });
+        toast('Please link a completed project first to mark as Mastered', { icon: '⚠️' });
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       if (editingSkill) {
         await api.updateSkill(editingSkill.id, data);
+        // Track skill update
+        if (editingSkill.status !== data.status) {
+          skillEvents.statusChanged(editingSkill.status, data.status);
+        }
+        skillEvents.updated('multiple');
         toast.success('Skill updated successfully');
       } else {
         await api.createSkill(data);
+        // Track skill creation
+        skillEvents.created(data.category, data.status);
         toast.success('Skill added successfully');
       }
       loadSkills();
@@ -127,6 +164,8 @@ function StackTracker() {
     
     try {
       await api.deleteSkill(deleteConfirm.skill.id);
+      // Track skill deletion
+      skillEvents.deleted(deleteConfirm.skill.category);
       toast.success('Skill deleted successfully');
       loadSkills();
     } catch (error) {
@@ -135,13 +174,67 @@ function StackTracker() {
   };
 
   const handleStatusChange = async (skill, newStatus) => {
+    // Don't do anything if already in this status
+    if (skill.status === newStatus) return;
+    
+    // Check if trying to mark as mastered - need to verify linked completed project
+    if (newStatus === 'mastered') {
+      const linkedProjects = skill.linkedProjects || [];
+      const completedProjectIds = projects.filter(p => p.status === 'completed').map(p => p.id);
+      const hasLinkedCompletedProject = linkedProjects.some(id => completedProjectIds.includes(id));
+      
+      if (!hasLinkedCompletedProject) {
+        // Open modal to require linking a project
+        setRequireProjectModal({ open: true, skill });
+        return;
+      }
+    }
+    
+    // Optimistic update - update UI immediately
+    const previousSkills = [...skills];
+    setSkills(skills.map(s => 
+      s.id === skill.id ? { ...s, status: newStatus } : s
+    ));
+    
     try {
-      await api.updateSkill(skill.id, { ...skill, status: newStatus });
+      // Only send the fields needed for update - avoid Firestore Timestamp objects
+      // Ensure linkedProjects is always an array
+      const linkedProjects = Array.isArray(skill.linkedProjects) 
+        ? skill.linkedProjects 
+        : (skill.linkedProjects ? Object.values(skill.linkedProjects) : []);
+      
+      await api.updateSkill(skill.id, {
+        name: skill.name,
+        category: skill.category,
+        status: newStatus,
+        icon: skill.icon || '📚',
+        linkedProjects: linkedProjects
+      });
+      // Track status change
+      skillEvents.statusChanged(skill.status, newStatus);
       toast.success(`Moved to ${STATUS_CONFIG[newStatus].label}`);
-      loadSkills();
     } catch (error) {
+      // Rollback on error
+      setSkills(previousSkills);
       toast.error(error.message || 'Failed to update skill');
     }
+  };
+
+  const handleProjectLinked = (skillId, linkedProjects) => {
+    // Update local state after project is linked and skill is marked as mastered
+    setSkills(skills.map(s => 
+      s.id === skillId ? { ...s, status: 'mastered', linkedProjects } : s
+    ));
+    // Track project linked event
+    skillEvents.linkedToProject();
+  };
+
+  // Helper to get linked project names for a skill
+  const getLinkedProjectNames = (skill) => {
+    const linkedIds = skill.linkedProjects || [];
+    return projects
+      .filter(p => linkedIds.includes(p.id) && p.status === 'completed')
+      .map(p => p.name);
   };
 
   const groupedSkills = {
@@ -187,7 +280,10 @@ function StackTracker() {
               </div>
               
               <div className="space-y-3 min-h-[200px]">
-                {statusSkills.map(skill => (
+                {statusSkills.map(skill => {
+                  const linkedProjectNames = getLinkedProjectNames(skill);
+                  
+                  return (
                   <div 
                     key={skill.id} 
                     className="group bg-dark-700/50 rounded-lg p-3 hover:bg-dark-700 transition-colors"
@@ -214,6 +310,18 @@ function StackTracker() {
                       </div>
                     </div>
                     
+                    {/* Show linked projects for mastered skills */}
+                    {skill.status === 'mastered' && linkedProjectNames.length > 0 && (
+                      <div className="mt-2 flex items-center gap-1.5 text-xs text-gray-500">
+                        <FolderCheck className="w-3 h-3 text-accent-green" />
+                        <span className="truncate">
+                          {linkedProjectNames.length === 1 
+                            ? linkedProjectNames[0] 
+                            : `${linkedProjectNames[0]} +${linkedProjectNames.length - 1} more`}
+                        </span>
+                      </div>
+                    )}
+                    
                     {/* Quick status change */}
                     <div className="flex gap-1 mt-3 pt-2 border-t border-dark-600">
                       {Object.entries(STATUS_CONFIG).map(([s, c]) => (
@@ -231,7 +339,8 @@ function StackTracker() {
                       ))}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
                 
                 {statusSkills.length === 0 && (
                   <div className="text-center py-8 text-gray-500">
@@ -245,79 +354,71 @@ function StackTracker() {
       </div>
 
       {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="glass-card w-full max-w-md p-6 m-4">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold">
-                {editingSkill ? 'Edit Skill' : 'Add New Skill'}
-              </h2>
-              <button onClick={closeModal} className="p-2 hover:bg-dark-600 rounded-lg">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Name</label>
-                <input
-                  type="text"
-                  {...register('name')}
-                  className={`input-field ${errors.name ? 'border-red-500 focus:ring-red-500' : ''}`}
-                  placeholder="e.g., JavaScript, React, Docker"
-                />
-                {errors.name && (
-                  <p className="text-red-400 text-xs mt-1">{errors.name.message}</p>
-                )}
-              </div>
-              
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Category</label>
-                <select {...register('category')} className="input-field">
-                  {CATEGORY_OPTIONS.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Status</label>
-                <select {...register('status')} className="input-field">
-                  {Object.entries(STATUS_CONFIG).map(([value, { label }]) => (
-                    <option key={value} value={value}>{label}</option>
-                  ))}
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Icon</label>
-                <div className="flex flex-wrap gap-2">
-                  {ICON_OPTIONS.map(icon => (
-                    <button
-                      key={icon}
-                      type="button"
-                      onClick={() => setValue('icon', icon)}
-                      className={`w-10 h-10 text-xl rounded-lg flex items-center justify-center transition-colors
-                        ${selectedIcon === icon ? 'bg-accent-purple/30 ring-2 ring-accent-purple' : 'bg-dark-600 hover:bg-dark-500'}`}
-                    >
-                      {icon}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              
-              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={closeModal} className="btn-secondary flex-1">
-                  Cancel
-                </button>
-                <LoadingButton type="submit" loading={saving} className="btn-primary flex-1">
-                  {editingSkill ? 'Update' : 'Add'} Skill
-                </LoadingButton>
-              </div>
-            </form>
+      <Modal
+        isOpen={showModal}
+        onClose={closeModal}
+        title={editingSkill ? 'Edit Skill' : 'Add New Skill'}
+        size="sm"
+      >
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Name</label>
+            <input
+              type="text"
+              {...register('name')}
+              className={`input-field ${errors.name ? 'border-red-500 focus:ring-red-500' : ''}`}
+              placeholder="e.g., JavaScript, React, Docker"
+            />
+            {errors.name && (
+              <p className="text-red-400 text-xs mt-1">{errors.name.message}</p>
+            )}
           </div>
-        </div>
-      )}
+          
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Category</label>
+            <select {...register('category')} className="input-field">
+              {CATEGORY_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Status</label>
+            <select {...register('status')} className="input-field">
+              {Object.entries(STATUS_CONFIG).map(([value, { label }]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Icon</label>
+            <div className="flex flex-wrap gap-2">
+              {ICON_OPTIONS.map(icon => (
+                <button
+                  key={icon}
+                  type="button"
+                  onClick={() => setValue('icon', icon)}
+                  className={`w-10 h-10 text-xl rounded-lg flex items-center justify-center transition-colors
+                    ${selectedIcon === icon ? 'bg-accent-purple/30 ring-2 ring-accent-purple' : 'bg-dark-600 hover:bg-dark-500'}`}
+                >
+                  {icon}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div className="flex gap-3 pt-4">
+            <button type="button" onClick={closeModal} className="btn-secondary flex-1">
+              Cancel
+            </button>
+            <LoadingButton type="submit" loading={saving} className="btn-primary flex-1">
+              {editingSkill ? 'Update' : 'Add'} Skill
+            </LoadingButton>
+          </div>
+        </form>
+      </Modal>
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
@@ -328,6 +429,18 @@ function StackTracker() {
         message={`Are you sure you want to delete "${deleteConfirm.skill?.name}"? This action cannot be undone.`}
         confirmText="Delete"
         variant="danger"
+      />
+
+      {/* Require Project Link Modal */}
+      <RequireProjectLinkModal
+        isOpen={requireProjectModal.open}
+        onClose={() => setRequireProjectModal({ open: false, skill: null })}
+        skill={requireProjectModal.skill}
+        onLinked={(linkedProjects) => {
+          if (requireProjectModal.skill) {
+            handleProjectLinked(requireProjectModal.skill.id, linkedProjects);
+          }
+        }}
       />
     </div>
   );
