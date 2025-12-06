@@ -46,7 +46,7 @@ export function initAnalytics(): void {
     respect_dnt: true,
     
     // Don't opt out in dev - allow testing
-    loaded: (ph: typeof posthog) => {
+    loaded: () => {
       console.log(`✅ PostHog loaded (${isProduction ? 'production' : 'development'} mode, host: ${POSTHOG_HOST})`);
     },
     

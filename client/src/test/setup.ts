@@ -18,7 +18,7 @@ vi.mock('posthog-js', () => ({
 vi.mock('posthog-js/react', () => {
   const React = require('react');
   return {
-    PostHogProvider: ({ children }: { children: React.ReactNode }) => children,
+    PostHogProvider: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children),
     usePostHog: () => ({
       capture: vi.fn(),
       identify: vi.fn(),
