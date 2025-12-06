@@ -120,38 +120,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: client-build
-          path: client/dist
-      
-      - name: Install Vercel CLI
-        run: npm install -g vercel@latest
-      
-      - name: Deploy to Vercel Preview
-        working-directory: ./client
+      - name: Notify preview
         run: |
-          vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
-          vercel build --token=${{ secrets.VERCEL_TOKEN }}
-          vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }} > deployment-url.txt
-          echo "Preview URL: $(cat deployment-url.txt)"
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-      
-      - name: Comment PR with preview URL
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            const url = fs.readFileSync('client/deployment-url.txt', 'utf8').trim();
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `🚀 **Preview Deployment Ready!**\n\n📍 URL: ${url}\n\nThis preview will be automatically updated on new commits.`
-            })
+          echo "✅ Build passed for PR"
+          echo "📍 Vercel will auto-create a preview deployment"
+          echo "Preview URL will be available shortly at your Vercel dashboard"
 
   deploy-production:
     name: Deploy Production
@@ -163,48 +136,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: client-build
-          path: client/dist
-      
-      - name: Install Vercel CLI
-        run: npm install -g vercel@latest
-      
-      - name: Deploy Client to Vercel Production
-        working-directory: ./client
+      - name: Notify deployment
         run: |
-          vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-          vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-          vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-      
-      - name: Deploy Server to Google Cloud Run
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
-      
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-      
-      - name: Deploy to Cloud Run
-        run: |
-          gcloud run deploy devorbit-api \
-            --source ./server \
-            --region us-central1 \
-            --platform managed \
-            --allow-unauthenticated \
-            --set-env-vars "NODE_ENV=production"
-      
-      - name: Create Sentry release
-        uses: getsentry/action-release@v1
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-        with:
-          environment: production
-          version: ${{ github.sha }}
+          echo "✅ Build passed and merged to main"
+          echo "📍 Frontend deployment: Vercel will auto-deploy from GitHub"
+          echo "📍 Backend deployment: DigitalOcean App Platform will auto-deploy from GitHub"
