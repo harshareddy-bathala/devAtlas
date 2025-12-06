@@ -29,18 +29,20 @@ export default defineConfig(({ mode }) => {
       sourcemap: mode === 'production' ? 'hidden' : true,
       rollupOptions: {
         output: {
-          // Manual chunk splitting for better caching
+          // Manual chunk splitting for better caching and performance
           manualChunks: {
             // Core React dependencies - rarely change
             'react-vendor': ['react', 'react-dom', 'react-router-dom'],
             // Firebase SDK - large and stable
             'firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
-            // UI libraries - charts, animations
-            'ui-vendor': ['framer-motion', 'recharts'],
+            // Charts library - large, loaded on dashboard
+            'charts': ['recharts'],
+            // Animations - smaller chunk
+            'animations': ['framer-motion'],
             // Form handling and validation
             'form-vendor': ['react-hook-form', '@hookform/resolvers', 'zod'],
-            // Utilities
-            'utils-vendor': ['date-fns', 'lucide-react']
+            // Icons and utilities
+            'ui-vendor': ['lucide-react', 'date-fns', 'clsx', 'tailwind-merge']
           }
         }
       }

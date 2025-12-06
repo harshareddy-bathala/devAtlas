@@ -16,6 +16,10 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const isDev = process.env.NODE_ENV !== 'production';
 
+// Trust proxy - important for accurate IP detection behind reverse proxies (DigitalOcean, etc.)
+// This allows express-rate-limit to correctly identify client IPs from X-Forwarded-For header
+app.set('trust proxy', 1);
+
 // Initialize Firebase
 initializeFirebase();
 
