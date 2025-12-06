@@ -6,7 +6,7 @@ const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const { initializeFirebase, verifyIdToken, getOrCreateUser, getAuth, getDb, admin } = require('./firebase');
 const db = require('./db'); // Use new modular database layer
-const { getCached, invalidateCache, invalidateUserCache, isCacheAvailable } = require('./cache');
+const { getCached, invalidateCache, invalidateUserCache, isCacheAvailable, testCacheHealth } = require('./cache');
 const { initSentry, setSentryUser, captureException, addBreadcrumb } = require('./sentry');
 const { skillSchema, projectSchema, resourceSchema, activitySchema, idParamSchema, profileSchema, paginationSchema } = require('./validation');
 const { validate, validateParams, validateQuery, asyncHandler, errorHandler, requestLogger, sanitize, requestIdMiddleware } = require('./middleware');
@@ -192,9 +192,25 @@ app.get('/api/v1/health', asyncHandler(async (req, res) => {
   // Check Redis connectivity
   if (isCacheAvailable()) {
     try {
-      // Quick ping to verify connection
-      services.redis = 'connected';
-      checks.push({ service: 'redis', status: 'pass', latency: null });
+      // Perform actual health check using testCacheHealth
+      const cacheHealth = await testCacheHealth();
+      if (cacheHealth.status === 'connected') {
+        services.redis = 'connected';
+        checks.push({ 
+          service: 'redis', 
+          status: 'pass', 
+          latency: null,
+          type: cacheHealth.type 
+        });
+      } else {
+        services.redis = 'disconnected';
+        checks.push({ 
+          service: 'redis', 
+          status: 'fail', 
+          error: cacheHealth.test,
+          type: cacheHealth.type 
+        });
+      }
     } catch (error) {
       services.redis = 'disconnected';
       // Redis being down doesn't make the app unhealthy (graceful degradation)
@@ -237,6 +253,21 @@ app.get('/api/v1/health', asyncHandler(async (req, res) => {
     services,
     checks
   });
+}));
+
+// Dedicated cache health check endpoint
+app.get('/api/v1/cache-health', asyncHandler(async (req, res) => {
+  const cacheHealth = await testCacheHealth();
+  res.json({
+    success: true,
+    data: cacheHealth
+  });
+}));
+
+// Sentry test endpoint - triggers a test error for verification
+app.get('/api/v1/sentry-test', asyncHandler(async (req, res) => {
+  // This will be caught by Sentry error handler
+  throw new Error('Sentry test error from DevOrbit backend');
 }));
 
 // Helper to format uptime

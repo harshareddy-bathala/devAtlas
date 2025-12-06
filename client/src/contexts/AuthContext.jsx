@@ -10,6 +10,7 @@ import {
 } from '../lib/firebase';
 import { clearTokenCache } from '../utils/api';
 import api from '../utils/api';
+import { identifyUser, resetAnalytics } from '../lib/analytics';
 
 const AuthContext = createContext(null);
 
@@ -60,6 +61,9 @@ export function AuthProvider({ children }) {
           avatarUrl: firebaseUser.photoURL
         });
         
+        // Identify user for analytics (only with anonymous ID - no PII)
+        identifyUser(firebaseUser.uid);
+        
         // Then fetch profile data from Firestore
         setIsLoading(false);
         // Fetch profile after auth is confirmed
@@ -88,6 +92,8 @@ export function AuthProvider({ children }) {
   const signOut = async () => {
     setIsLoading(true);
     try {
+      // Reset analytics before signing out
+      resetAnalytics();
       // Clear token cache before signing out
       clearTokenCache();
       await firebaseSignOut();

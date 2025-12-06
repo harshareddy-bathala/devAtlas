@@ -1,0 +1,282 @@
+# DevOrbit Monitoring & Observability Guide
+
+This document explains how to monitor and troubleshoot DevOrbit using the integrated observability stack.
+
+## 📊 Services Overview
+
+| Service | Purpose | Dashboard |
+|---------|---------|-----------|
+| **Upstash Redis** | Serverless caching | [console.upstash.com](https://console.upstash.com) |
+| **Sentry** | Error tracking & performance | [sentry.io](https://sentry.io) |
+| **PostHog** | Product analytics | [app.posthog.com](https://app.posthog.com) |
+
+---
+
+## 🔴 Upstash Redis (Caching)
+
+### Dashboard Access
+1. Go to [console.upstash.com](https://console.upstash.com)
+2. Select your Redis database
+3. View the **Data Browser** for cached keys
+
+### Key Metrics to Monitor
+- **Commands/sec**: Normal range is 10-100 for typical usage
+- **Memory Usage**: Should stay under 80% of quota
+- **Hit Rate**: Target >70% for effective caching
+- **Latency**: Should be <10ms for reads
+
+### Cache Key Patterns
+DevOrbit uses the following cache key patterns:
+```
+skills:{userId}       - User's skills list (TTL: 300s)
+projects:{userId}     - User's projects list (TTL: 300s)
+resources:{userId}    - User's resources list (TTL: 300s)
+stats:{userId}        - User's dashboard stats (TTL: 300s)
+progress:{userId}     - User's progress data (TTL: 300s)
+```
+
+### Test Cache Locally
+```bash
+# Check cache health
+curl http://localhost:3001/api/v1/cache-health
+
+# Expected response:
+# {"success":true,"data":{"status":"connected","test":"passed","type":"upstash"}}
+```
+
+### Troubleshooting
+
+#### "Cache not configured" error
+- Verify `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` are set
+- Check that values don't have extra spaces or quotes
+
+#### High cache miss rate
+- Check if data is being invalidated too frequently
+- Consider increasing TTL values for stable data
+
+#### Memory issues
+- Use Upstash dashboard to identify large keys
+- Consider reducing TTL or caching less data
+
+---
+
+## 🐛 Sentry (Error Tracking)
+
+### Dashboard Access
+1. Go to [sentry.io](https://sentry.io)
+2. Select the DevOrbit project (frontend or backend)
+3. Navigate to **Issues** for error list
+
+### Key Views
+- **Issues**: All errors grouped by type
+- **Performance**: Request latency and throughput
+- **Replays** (frontend): Session recordings for error context
+
+### Sentry Projects
+DevOrbit uses two separate Sentry projects:
+- **Frontend**: `VITE_SENTRY_DSN` - React/Vite errors
+- **Backend**: `SENTRY_DSN` - Express/Node.js errors
+
+### Test Sentry Integration
+```bash
+# Backend: Trigger a test error
+curl http://localhost:3001/api/v1/sentry-test
+
+# This will:
+# 1. Throw an error on the server
+# 2. Return a 500 response
+# 3. Log the error to Sentry (in production mode)
+```
+
+### PII Protection
+Sentry is configured to automatically strip:
+- Email addresses from user objects
+- Authorization headers from requests
+- IP addresses
+- Cookie values
+
+### Troubleshooting
+
+#### Errors not appearing in Sentry
+1. Check `SENTRY_DSN` / `VITE_SENTRY_DSN` is set
+2. Verify `NODE_ENV=production` for backend (errors only sent in prod)
+3. Check `import.meta.env.PROD` is true for frontend
+4. Verify DSN format: `https://<key>@<org>.ingest.sentry.io/<project-id>`
+
+#### Too many errors
+- Check the `ignoreErrors` list in `sentry.js` and `sentry.ts`
+- Consider adding rate limiting for known issues
+
+---
+
+## 📈 PostHog (Product Analytics)
+
+### Dashboard Access
+1. Go to [app.posthog.com](https://app.posthog.com)
+2. Select your DevOrbit project
+3. Navigate to **Insights** or **Events**
+
+### Tracked Events
+
+#### Skill Events
+| Event | Properties |
+|-------|------------|
+| `skill_created` | `category`, `status` |
+| `skill_updated` | `field`, `changed` |
+| `skill_deleted` | `category` |
+| `skill_status_changed` | `from`, `to` |
+| `skill_linked_to_project` | - |
+
+#### Project Events
+| Event | Properties |
+|-------|------------|
+| `project_created` | `status` |
+| `project_updated` | `field` |
+| `project_deleted` | - |
+| `project_status_changed` | `from`, `to` |
+
+#### Resource Events
+| Event | Properties |
+|-------|------------|
+| `resource_created` | `type` |
+| `resource_deleted` | - |
+| `resource_opened` | `type` |
+
+#### Auth Events
+| Event | Properties |
+|-------|------------|
+| `user_signed_up` | `method` |
+| `user_signed_in` | `method` |
+| `user_signed_out` | - |
+
+### Privacy Settings
+PostHog is configured with privacy in mind:
+- `autocapture: false` - No automatic DOM event capture
+- `disable_session_recording: true` - No session recordings
+- `respect_dnt: true` - Honors Do Not Track
+- No PII collection (emails, names, IPs are stripped)
+
+### Test Analytics Locally
+Analytics events are logged to console in development:
+```
+[Analytics] skill_created { category: 'language', status: 'learning' }
+```
+
+Events are only sent to PostHog in production mode.
+
+### Troubleshooting
+
+#### Events not appearing in PostHog
+1. Check `VITE_POSTHOG_KEY` is set
+2. Verify you're in production mode (`import.meta.env.PROD`)
+3. Check browser console for initialization message
+4. Events may take 1-2 minutes to appear in dashboard
+
+#### User identification issues
+- Users are identified only by UID (no PII)
+- Check `identifyUser()` is called after login
+
+---
+
+## 🏥 Health Check Endpoint
+
+### Endpoint: `GET /api/v1/health`
+
+Returns detailed health status of all services.
+
+#### Example Response
+```json
+{
+  "status": "healthy",
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "version": "2.0.0",
+  "environment": "production",
+  "uptime": {
+    "seconds": 3600,
+    "formatted": "1h 0m 0s"
+  },
+  "memory": {
+    "rss": 128,
+    "heapUsed": 64,
+    "heapTotal": 96
+  },
+  "services": {
+    "firestore": "connected",
+    "redis": "connected"
+  },
+  "checks": [
+    { "service": "firestore", "status": "pass" },
+    { "service": "redis", "status": "pass", "type": "upstash" }
+  ]
+}
+```
+
+#### Status Codes
+- `200` - Healthy or degraded (Redis down is degraded, not unhealthy)
+- `503` - Unhealthy (Firestore is down)
+
+---
+
+## 🔧 Environment Variables
+
+### Backend (`server/.env`)
+```env
+# Required for Upstash Redis
+UPSTASH_REDIS_REST_URL=https://xxx.upstash.io
+UPSTASH_REDIS_REST_TOKEN=AXxxxx
+
+# Required for Sentry
+SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx
+
+# Optional: Fallback to ioredis
+REDIS_URL=redis://localhost:6379
+```
+
+### Frontend (`client/.env`)
+```env
+# Required for Sentry
+VITE_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx
+
+# Required for PostHog
+VITE_POSTHOG_KEY=phc_xxxxx
+VITE_POSTHOG_HOST=https://app.posthog.com
+```
+
+---
+
+## 🚨 Common Issues & Solutions
+
+### 1. "Redis connection failed" on startup
+**Cause**: Upstash credentials not set or invalid
+**Solution**: 
+- Check `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`
+- Verify the database exists in Upstash console
+
+### 2. High error rate in Sentry
+**Cause**: Often authentication or network issues
+**Solution**:
+- Check `ignoreErrors` list for expected errors
+- Look for patterns in error timing
+
+### 3. No analytics data in PostHog
+**Cause**: Running in development mode
+**Solution**:
+- Events only send in production
+- Check `VITE_POSTHOG_KEY` is set
+- Build with `npm run build` and test with `npm run preview`
+
+### 4. Cache not reducing Firestore reads
+**Cause**: Cache invalidation happening too often
+**Solution**:
+- Check cache TTL values
+- Monitor which keys are being invalidated
+- Consider longer TTL for stable data
+
+---
+
+## 📞 Support
+
+For issues with monitoring services:
+- **Upstash**: [upstash.com/docs](https://upstash.com/docs)
+- **Sentry**: [docs.sentry.io](https://docs.sentry.io)
+- **PostHog**: [posthog.com/docs](https://posthog.com/docs)

@@ -1,11 +1,35 @@
 /**
  * Redis Cache Module for DevOrbit
  * 
- * Provides caching functionality with Redis, with graceful fallback
- * if Redis is unavailable.
+ * Provides caching functionality with Upstash Redis (serverless) or ioredis (local),
+ * with graceful fallback if Redis is unavailable.
+ * 
+ * Priority:
+ * 1. Upstash Redis (UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN)
+ * 2. ioredis (REDIS_URL or localhost:6379)
+ * 3. No caching (graceful fallback)
  */
 
-const Redis = require('ioredis');
+// Try to import Upstash Redis, fallback to ioredis
+let Redis;
+let isUpstash = false;
+
+try {
+  // Check if Upstash credentials are available
+  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+    Redis = require('@upstash/redis').Redis;
+    isUpstash = true;
+  } else {
+    Redis = require('ioredis');
+  }
+} catch (error) {
+  try {
+    Redis = require('ioredis');
+  } catch (e) {
+    console.warn('⚠️  No Redis client available (caching disabled)');
+    Redis = null;
+  }
+}
 
 let redis = null;
 let isRedisAvailable = false;
@@ -14,9 +38,23 @@ let isRedisAvailable = false;
 function initRedis() {
   if (redis) return redis;
 
-  const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-  
   try {
+    if (isUpstash) {
+      // Upstash Redis (serverless, REST-based)
+      redis = new Redis({
+        url: process.env.UPSTASH_REDIS_REST_URL,
+        token: process.env.UPSTASH_REDIS_REST_TOKEN,
+      });
+      
+      // Upstash is always available once initialized (REST-based, no persistent connection)
+      isRedisAvailable = true;
+      console.log('✅ Upstash Redis initialized (serverless)');
+      return redis;
+    }
+    
+    // Fallback to ioredis for local development
+    const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+    
     redis = new Redis(redisUrl, {
       maxRetriesPerRequest: 3,
       retryDelayOnFailover: 100,
@@ -27,7 +65,7 @@ function initRedis() {
     });
 
     redis.on('connect', () => {
-      console.log('🔗 Redis connected');
+      console.log('🔗 Redis connected (ioredis)');
       isRedisAvailable = true;
     });
 
@@ -94,10 +132,19 @@ async function getCached(key, fetchFn, ttl = 300) {
     // Fetch fresh data
     const data = await fetchFn();
 
-    // Cache the result (don't await, fire and forget)
-    redis.setex(key, ttl, JSON.stringify(data)).catch((err) => {
-      console.warn(`Failed to cache ${key}:`, err.message);
-    });
+    // Cache the result - use appropriate method based on client type
+    // Upstash uses set() with ex option, ioredis uses setex()
+    try {
+      if (isUpstash) {
+        await redis.set(key, JSON.stringify(data), { ex: ttl });
+      } else {
+        redis.setex(key, ttl, JSON.stringify(data)).catch((err) => {
+          console.warn(`Failed to cache ${key}:`, err.message);
+        });
+      }
+    } catch (cacheErr) {
+      console.warn(`Failed to cache ${key}:`, cacheErr.message);
+    }
 
     return data;
   } catch (error) {
@@ -119,15 +166,22 @@ async function invalidateCache(pattern) {
 
   try {
     // Find all matching keys
+    // Both Upstash and ioredis support the keys() method
     const keys = await redis.keys(pattern);
     
-    if (keys.length === 0) {
+    if (!keys || keys.length === 0) {
       return 0;
     }
 
     // Delete all matching keys
-    const deleted = await redis.del(...keys);
-    return deleted;
+    // Upstash del() accepts an array, ioredis accepts spread args
+    let deleted;
+    if (isUpstash) {
+      deleted = await redis.del(...keys);
+    } else {
+      deleted = await redis.del(...keys);
+    }
+    return typeof deleted === 'number' ? deleted : keys.length;
   } catch (error) {
     console.warn(`Failed to invalidate cache pattern ${pattern}:`, error.message);
     return 0;
@@ -175,7 +229,11 @@ async function setCache(key, value, ttl = 300) {
   }
 
   try {
-    await redis.setex(key, ttl, JSON.stringify(value));
+    if (isUpstash) {
+      await redis.set(key, JSON.stringify(value), { ex: ttl });
+    } else {
+      await redis.setex(key, ttl, JSON.stringify(value));
+    }
     return true;
   } catch (error) {
     console.warn(`Failed to set cache ${key}:`, error.message);
@@ -212,12 +270,53 @@ function isCacheAvailable() {
 
 /**
  * Close Redis connection (for graceful shutdown)
+ * Note: Upstash is REST-based and doesn't require connection cleanup
  */
 async function closeCache() {
   if (redis) {
-    await redis.quit();
+    // Only ioredis has a quit method - Upstash is REST-based
+    if (!isUpstash && typeof redis.quit === 'function') {
+      await redis.quit();
+    }
     redis = null;
     isRedisAvailable = false;
+  }
+}
+
+/**
+ * Test Redis connection health
+ * @returns {Promise<{status: string, test: string|null, type: string|null}>}
+ */
+async function testCacheHealth() {
+  if (!isRedisAvailable || !redis) {
+    return { status: 'not_configured', test: null, type: null };
+  }
+
+  try {
+    const testKey = 'health_check';
+    const testValue = 'ok';
+    
+    // Set a test value with short TTL
+    if (isUpstash) {
+      await redis.set(testKey, testValue, { ex: 10 });
+    } else {
+      await redis.setex(testKey, 10, testValue);
+    }
+    
+    // Read it back
+    const result = await redis.get(testKey);
+    
+    if (result === testValue) {
+      return { 
+        status: 'connected', 
+        test: 'passed', 
+        type: isUpstash ? 'upstash' : 'ioredis' 
+      };
+    } else {
+      return { status: 'error', test: 'value_mismatch', type: isUpstash ? 'upstash' : 'ioredis' };
+    }
+  } catch (error) {
+    return { status: 'error', test: error.message, type: isUpstash ? 'upstash' : 'ioredis' };
   }
 }
 
@@ -229,5 +328,6 @@ module.exports = {
   setCache,
   getCache,
   isCacheAvailable,
-  closeCache
+  closeCache,
+  testCacheHealth
 };

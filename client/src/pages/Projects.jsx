@@ -9,6 +9,7 @@ import { PageLoader, LoadingButton } from '../components/LoadingStates';
 import ConfirmDialog from '../components/ConfirmDialog';
 import Pagination from '../components/Pagination.tsx';
 import { Modal } from '../components/common';
+import { projectEvents } from '../lib/analytics';
 
 // Validation schema
 const projectFormSchema = z.object({
@@ -154,9 +155,16 @@ function Projects() {
     try {
       if (editingProject) {
         await api.updateProject(editingProject.id, data);
+        // Track project update
+        if (editingProject.status !== data.status) {
+          projectEvents.statusChanged(editingProject.status, data.status);
+        }
+        projectEvents.updated('multiple');
         toast.success('Project updated successfully');
       } else {
         await api.createProject(data);
+        // Track project creation with detailed properties
+        projectEvents.created(data.status);
         toast.success('Project created successfully');
       }
       loadProjects(currentPage);
@@ -173,6 +181,8 @@ function Projects() {
     
     try {
       await api.deleteProject(deleteConfirm.project.id);
+      // Track project deletion
+      projectEvents.deleted();
       toast.success('Project deleted successfully');
       loadProjects(currentPage);
     } catch (error) {
@@ -213,6 +223,8 @@ function Projects() {
         demoUrl: project.demo_url,
         techStack: project.tech_stack
       });
+      // Track status change
+      projectEvents.statusChanged(project.status, newStatus);
       toast.success(`Moved to ${STATUS_CONFIG[newStatus].label}`);
     } catch (error) {
       // Rollback on error
