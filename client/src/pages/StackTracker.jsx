@@ -8,7 +8,6 @@ import api from '../utils/api';
 import { PageLoader, LoadingButton } from '../components/LoadingStates';
 import ConfirmDialog from '../components/ConfirmDialog';
 import RequireProjectLinkModal from '../components/RequireProjectLinkModal';
-import { skillEvents } from '../lib/analytics';
 import { Modal } from '../components/common';
 
 // Validation schema
@@ -138,16 +137,9 @@ function StackTracker() {
     try {
       if (editingSkill) {
         await api.updateSkill(editingSkill.id, data);
-        // Track skill update
-        if (editingSkill.status !== data.status) {
-          skillEvents.statusChanged(editingSkill.status, data.status);
-        }
-        skillEvents.updated('multiple');
         toast.success('Skill updated successfully');
       } else {
         await api.createSkill(data);
-        // Track skill creation
-        skillEvents.created(data.category, data.status);
         toast.success('Skill added successfully');
       }
       loadSkills();
@@ -164,8 +156,6 @@ function StackTracker() {
     
     try {
       await api.deleteSkill(deleteConfirm.skill.id);
-      // Track skill deletion
-      skillEvents.deleted(deleteConfirm.skill.category);
       toast.success('Skill deleted successfully');
       loadSkills();
     } catch (error) {
@@ -210,8 +200,6 @@ function StackTracker() {
         icon: skill.icon || '📚',
         linkedProjects: linkedProjects
       });
-      // Track status change
-      skillEvents.statusChanged(skill.status, newStatus);
       toast.success(`Moved to ${STATUS_CONFIG[newStatus].label}`);
     } catch (error) {
       // Rollback on error
@@ -225,8 +213,6 @@ function StackTracker() {
     setSkills(skills.map(s => 
       s.id === skillId ? { ...s, status: 'mastered', linkedProjects } : s
     ));
-    // Track project linked event
-    skillEvents.linkedToProject();
   };
 
   // Helper to get linked project names for a skill

@@ -9,7 +9,6 @@ import { PageLoader, LoadingButton } from '../components/LoadingStates';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { Modal, VirtualList } from '../components/common';
 import { useVirtualization } from '../hooks';
-import { resourceEvents } from '../lib/analytics';
 
 // Validation schema
 const resourceFormSchema = z.object({
@@ -244,8 +243,6 @@ function Resources() {
         toast.success('Resource updated successfully');
       } else {
         await api.createResource(data);
-        // Track resource creation
-        resourceEvents.created(data.type);
         toast.success('Resource added successfully');
       }
       loadData();
