@@ -7,8 +7,8 @@
 
 import posthog from 'posthog-js';
 
-const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_KEY;
-const POSTHOG_HOST = import.meta.env.VITE_POSTHOG_HOST || 'https://app.posthog.com';
+const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_KEY || import.meta.env.VITE_PUBLIC_POSTHOG_KEY;
+const POSTHOG_HOST = import.meta.env.VITE_POSTHOG_HOST || import.meta.env.VITE_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
 const isProduction = import.meta.env.PROD;
 
 let isInitialized = false;
@@ -18,9 +18,7 @@ let isInitialized = false;
  */
 export function initAnalytics(): void {
   if (!POSTHOG_KEY) {
-    if (isProduction) {
-      console.warn('⚠️ PostHog key not configured - analytics disabled');
-    }
+    console.warn('⚠️ PostHog key not configured - analytics disabled');
     return;
   }
 
@@ -34,7 +32,7 @@ export function initAnalytics(): void {
     // Privacy settings
     persistence: 'localStorage',
     autocapture: false, // Disable auto-capture for privacy
-    capture_pageview: true, // Manual pageviews
+    capture_pageview: true, // Capture pageviews
     capture_pageleave: true,
     
     // Disable session recording to protect privacy
@@ -46,18 +44,15 @@ export function initAnalytics(): void {
     // Respect Do Not Track
     respect_dnt: true,
     
-    // Only load in production
+    // Don't opt out in dev - allow testing
     loaded: (ph: typeof posthog) => {
-      if (!isProduction) {
-        ph.opt_out_capturing();
-      }
+      console.log(`✅ PostHog loaded (${isProduction ? 'production' : 'development'} mode, host: ${POSTHOG_HOST})`);
     },
     
     // Property filtering
     property_blacklist: [
       '$ip',
       '$device_id',
-      '$user_id', // We'll set this manually with just the ID
     ],
   });
 
@@ -72,18 +67,23 @@ export function trackEvent(
   eventName: string,
   properties?: Record<string, string | number | boolean | null>
 ): void {
-  if (!isInitialized || !isProduction) {
-    // Log in development for debugging
-    if (!isProduction) {
-      console.debug(`[Analytics] ${eventName}`, properties);
-    }
+  if (!isInitialized) {
+    console.debug(`[Analytics] Not initialized, skipping: ${eventName}`);
     return;
   }
-
-  // Sanitize properties to remove any PII
-  const sanitizedProps = properties ? sanitizeProperties(properties) : undefined;
   
-  posthog.capture(eventName, sanitizedProps);
+  // Log in development for debugging
+  if (!isProduction) {
+    console.debug(`[Analytics] ${eventName}`, properties);
+  }
+  
+  // Send to PostHog in both dev and prod for testing
+  try {
+    const sanitizedProps = properties ? sanitizeProperties(properties) : undefined;
+    posthog.capture(eventName, sanitizedProps);
+  } catch (error) {
+    console.warn('[Analytics] Failed to track event:', error);
+  }
 }
 
 /**
@@ -100,15 +100,21 @@ export function trackPageView(pageName: string, properties?: Record<string, stri
  * Identify user (only with anonymous ID)
  */
 export function identifyUser(userId: string): void {
-  if (!isInitialized || !isProduction) {
+  if (!isInitialized) {
+    console.debug('[Analytics] Not initialized, skipping identify');
     return;
   }
 
   // Only identify with user ID, no PII
-  posthog.identify(userId, {
-    // Don't include email, name, or other PII
-    created_at: new Date().toISOString(),
-  });
+  try {
+    posthog.identify(userId, {
+      // Don't include email, name, or other PII
+      created_at: new Date().toISOString(),
+    });
+    console.debug(`[Analytics] User identified: ${userId.substring(0, 8)}...`);
+  } catch (error) {
+    console.warn('[Analytics] Failed to identify user:', error);
+  }
 }
 
 /**
@@ -126,7 +132,7 @@ export function resetAnalytics(): void {
  * Set user properties (non-PII only)
  */
 export function setUserProperties(properties: Record<string, string | number | boolean>): void {
-  if (!isInitialized || !isProduction) {
+  if (!isInitialized) {
     return;
   }
 

@@ -14,9 +14,7 @@ const isProduction = import.meta.env.PROD;
  */
 export function initSentry(): void {
   if (!SENTRY_DSN) {
-    if (isProduction) {
-      console.warn('⚠️ Sentry DSN not configured - error tracking disabled');
-    }
+    console.warn('⚠️ Sentry DSN not configured - error tracking disabled');
     return;
   }
 
@@ -28,11 +26,11 @@ export function initSentry(): void {
     tracesSampleRate: isProduction ? 0.1 : 1.0, // 10% in prod, 100% in dev
     
     // Session replay (capture 10% of sessions, 100% of error sessions)
-    replaysSessionSampleRate: 0.1,
+    replaysSessionSampleRate: isProduction ? 0.1 : 0,
     replaysOnErrorSampleRate: 1.0,
     
-    // Only send errors in production
-    enabled: isProduction,
+    // Enable in both dev and prod for testing (errors will be tagged with environment)
+    enabled: true,
     
     // Integrations
     integrations: [
@@ -65,15 +63,11 @@ export function initSentry(): void {
       /^chrome:\/\//i,
     ],
     
-    // Don't track localhost or dev URLs
-    denyUrls: [
-      /localhost/i,
-      /127\.0\.0\.1/i,
-      /0\.0\.0\.0/i,
-    ],
+    // Don't deny any URLs - allow localhost for testing
+    // In production, you can add specific deny patterns if needed
   });
 
-  console.log('✅ Sentry initialized');
+  console.log('✅ Sentry initialized (frontend)');
 }
 
 /**
