@@ -2,6 +2,7 @@
  * Sentry Integration for DevOrbit Server
  * 
  * Provides error tracking and performance monitoring with PII protection.
+ * Updated for Sentry SDK v8+ which uses a different API.
  */
 
 const Sentry = require('@sentry/node');
@@ -13,14 +14,13 @@ let isInitialized = false;
 
 /**
  * Initialize Sentry error tracking
- * @param {import('express').Express} app - Express application instance
+ * Must be called BEFORE Express app is created for proper instrumentation.
+ * In Sentry v8+, we don't need to pass the Express app to init.
  */
-function initSentry(app) {
+function initSentry() {
   if (!SENTRY_DSN) {
-    if (isProduction) {
-      console.warn('⚠️ Sentry DSN not configured - error tracking disabled');
-    }
-    return { requestHandler: noopMiddleware, errorHandler: noopMiddleware };
+    console.warn('⚠️ Sentry DSN not configured - error tracking disabled');
+    return false;
   }
 
   Sentry.init({
@@ -30,15 +30,12 @@ function initSentry(app) {
     // Performance monitoring
     tracesSampleRate: isProduction ? 0.1 : 1.0, // 10% in prod, 100% in dev
     
-    // Only send errors in production
-    enabled: isProduction,
+    // Enable in both dev and prod (errors tagged with environment)
+    enabled: true,
     
-    // Integrations
+    // Integrations - Sentry v8 auto-instruments Express
     integrations: [
-      // HTTP integration for request tracing
       Sentry.httpIntegration({ tracing: true }),
-      // Express integration
-      Sentry.expressIntegration({ app }),
     ],
     
     // PII Filtering - Remove sensitive data before sending
@@ -71,23 +68,36 @@ function initSentry(app) {
 
   isInitialized = true;
   console.log('✅ Sentry initialized (server)');
+  return true;
+}
 
-  return {
-    requestHandler: Sentry.Handlers.requestHandler({
-      // Include user data but it will be stripped by beforeSend
-      user: ['id'],
-      // Don't include IP
-      ip: false,
-    }),
-    errorHandler: Sentry.Handlers.errorHandler({
-      // Only send 500+ errors
-      shouldHandleError(error) {
-        // Capture 5xx errors and all unhandled errors
-        if (error.status === undefined) return true;
-        return error.status >= 500;
-      },
-    }),
-  };
+/**
+ * Setup Sentry Express error handler
+ * Must be called AFTER all routes are defined but BEFORE custom error handlers.
+ * @param {import('express').Express} app - Express application instance
+ */
+function setupSentryErrorHandler(app) {
+  if (!isInitialized) {
+    return;
+  }
+  
+  // Sentry v8+ uses setupExpressErrorHandler instead of Sentry.Handlers
+  Sentry.setupExpressErrorHandler(app);
+}
+
+/**
+ * Get a request handler middleware for Sentry (no-op in v8, kept for compatibility)
+ * In Sentry v8+, request instrumentation is automatic via httpIntegration
+ */
+function getRequestHandler() {
+  return noopMiddleware;
+}
+
+/**
+ * Get an error handler middleware (legacy - use setupSentryErrorHandler instead)
+ */
+function getErrorHandler() {
+  return noopMiddleware;
 }
 
 /**
@@ -313,6 +323,9 @@ function startTransaction(name, op) {
 
 module.exports = {
   initSentry,
+  setupSentryErrorHandler,
+  getRequestHandler,
+  getErrorHandler,
   setSentryUser,
   captureException,
   captureMessage,

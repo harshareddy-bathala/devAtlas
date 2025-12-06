@@ -1,4 +1,9 @@
 require('dotenv').config();
+
+// Initialize Sentry FIRST - before any other imports for proper instrumentation
+const { initSentry, setupSentryErrorHandler, setSentryUser, captureException, addBreadcrumb } = require('./sentry');
+initSentry();
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -7,7 +12,6 @@ const rateLimit = require('express-rate-limit');
 const { initializeFirebase, verifyIdToken, getOrCreateUser, getAuth, getDb, admin } = require('./firebase');
 const db = require('./db'); // Use new modular database layer
 const { getCached, invalidateCache, invalidateUserCache, isCacheAvailable, testCacheHealth } = require('./cache');
-const { initSentry, setSentryUser, captureException, addBreadcrumb } = require('./sentry');
 const { skillSchema, projectSchema, resourceSchema, activitySchema, idParamSchema, profileSchema, paginationSchema } = require('./validation');
 const { validate, validateParams, validateQuery, asyncHandler, errorHandler, requestLogger, sanitize, requestIdMiddleware } = require('./middleware');
 const { NotFoundError, UnauthorizedError, ValidationError } = require('./errors');
@@ -22,10 +26,6 @@ app.set('trust proxy', 1);
 
 // Initialize Firebase
 initializeFirebase();
-
-// Initialize Sentry (must be before other middleware)
-const { requestHandler: sentryRequestHandler, errorHandler: sentryErrorHandler } = initSentry(app);
-app.use(sentryRequestHandler);
 
 // Request ID middleware (for correlation)
 app.use(requestIdMiddleware);
@@ -647,7 +647,8 @@ app.use((req, res) => {
 });
 
 // Sentry error handler (must be before other error handlers)
-app.use(sentryErrorHandler);
+// In Sentry v8+, we use setupExpressErrorHandler instead of middleware
+setupSentryErrorHandler(app);
 
 // Global error handler
 app.use(errorHandler);
