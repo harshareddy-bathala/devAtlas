@@ -109,8 +109,6 @@ class ErrorBoundary extends React.Component {
     if (process.env.NODE_ENV === 'development') {
       console.error('Error caught by boundary:', error, errorInfo);
     }
-    
-    // TODO: Send to error tracking service (Sentry)
   }
 
   handleRefresh = () => {

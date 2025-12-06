@@ -3,13 +3,8 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import './index.css'
 
-// Initialize observability
-import { initSentry } from './lib/sentry'
 // Wrap the app with PostHogProvider for analytics
 import { PostHogProvider } from 'posthog-js/react'
-
-// Initialize Sentry for error tracking (before React renders)
-initSentry()
 
 const root = ReactDOM.createRoot(document.getElementById('root'))
 root.render(
