@@ -12,7 +12,6 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@sentry/node": "^8.0.0",
     "@upstash/redis": "^1.35.7",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",

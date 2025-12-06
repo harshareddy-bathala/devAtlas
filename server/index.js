@@ -1,9 +1,5 @@
 require('dotenv').config();
 
-// Initialize Sentry FIRST - before any other imports for proper instrumentation
-const { initSentry, setupSentryErrorHandler, setSentryUser, captureException, addBreadcrumb } = require('./sentry');
-initSentry();
-
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -156,8 +152,6 @@ const authMiddleware = asyncHandler(async (req, res, next) => {
   try {
     const decodedToken = await verifyIdToken(idToken);
     req.user = await getOrCreateUser(decodedToken);
-    // Set user in Sentry for error tracking
-    setSentryUser(req.user.id);
     next();
   } catch (error) {
     console.error('Auth error:', error.message);
@@ -262,12 +256,6 @@ app.get('/api/v1/cache-health', asyncHandler(async (req, res) => {
     success: true,
     data: cacheHealth
   });
-}));
-
-// Sentry test endpoint - triggers a test error for verification
-app.get('/api/v1/sentry-test', asyncHandler(async (req, res) => {
-  // This will be caught by Sentry error handler
-  throw new Error('Sentry test error from DevOrbit backend');
 }));
 
 // Helper to format uptime
@@ -645,10 +633,6 @@ app.use((req, res) => {
     code: 'NOT_FOUND'
   });
 });
-
-// Sentry error handler (must be before other error handlers)
-// In Sentry v8+, we use setupExpressErrorHandler instead of middleware
-setupSentryErrorHandler(app);
 
 // Global error handler
 app.use(errorHandler);

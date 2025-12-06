@@ -5,9 +5,8 @@ This document explains how to monitor and troubleshoot DevOrbit using the integr
 ## 📊 Services Overview
 
 | Service | Purpose | Dashboard |
-|---------|---------|-----------|
+|---------|---------|-----------||
 | **Upstash Redis** | Serverless caching | [console.upstash.com](https://console.upstash.com) |
-| **Sentry** | Error tracking & performance | [sentry.io](https://sentry.io) |
 | **PostHog** | Product analytics | [app.posthog.com](https://app.posthog.com) |
 
 ---
@@ -57,55 +56,6 @@ curl http://localhost:3001/api/v1/cache-health
 #### Memory issues
 - Use Upstash dashboard to identify large keys
 - Consider reducing TTL or caching less data
-
----
-
-## 🐛 Sentry (Error Tracking)
-
-### Dashboard Access
-1. Go to [sentry.io](https://sentry.io)
-2. Select the DevOrbit project (frontend or backend)
-3. Navigate to **Issues** for error list
-
-### Key Views
-- **Issues**: All errors grouped by type
-- **Performance**: Request latency and throughput
-- **Replays** (frontend): Session recordings for error context
-
-### Sentry Projects
-DevOrbit uses two separate Sentry projects:
-- **Frontend**: `VITE_SENTRY_DSN` - React/Vite errors
-- **Backend**: `SENTRY_DSN` - Express/Node.js errors
-
-### Test Sentry Integration
-```bash
-# Backend: Trigger a test error
-curl http://localhost:3001/api/v1/sentry-test
-
-# This will:
-# 1. Throw an error on the server
-# 2. Return a 500 response
-# 3. Log the error to Sentry (in production mode)
-```
-
-### PII Protection
-Sentry is configured to automatically strip:
-- Email addresses from user objects
-- Authorization headers from requests
-- IP addresses
-- Cookie values
-
-### Troubleshooting
-
-#### Errors not appearing in Sentry
-1. Check `SENTRY_DSN` / `VITE_SENTRY_DSN` is set
-2. Verify `NODE_ENV=production` for backend (errors only sent in prod)
-3. Check `import.meta.env.PROD` is true for frontend
-4. Verify DSN format: `https://<key>@<org>.ingest.sentry.io/<project-id>`
-
-#### Too many errors
-- Check the `ignoreErrors` list in `sentry.js` and `sentry.ts`
-- Consider adding rate limiting for known issues
 
 ---
 
@@ -225,21 +175,15 @@ Returns detailed health status of all services.
 UPSTASH_REDIS_REST_URL=https://xxx.upstash.io
 UPSTASH_REDIS_REST_TOKEN=AXxxxx
 
-# Required for Sentry
-SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx
-
 # Optional: Fallback to ioredis
 REDIS_URL=redis://localhost:6379
 ```
 
 ### Frontend (`client/.env`)
 ```env
-# Required for Sentry
-VITE_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx
-
 # Required for PostHog
-VITE_POSTHOG_KEY=phc_xxxxx
-VITE_POSTHOG_HOST=https://app.posthog.com
+VITE_PUBLIC_POSTHOG_KEY=phc_xxxxx
+VITE_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
 ```
 
 ---
@@ -252,20 +196,14 @@ VITE_POSTHOG_HOST=https://app.posthog.com
 - Check `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`
 - Verify the database exists in Upstash console
 
-### 2. High error rate in Sentry
-**Cause**: Often authentication or network issues
-**Solution**:
-- Check `ignoreErrors` list for expected errors
-- Look for patterns in error timing
-
-### 3. No analytics data in PostHog
+### 2. No analytics data in PostHog
 **Cause**: Running in development mode
 **Solution**:
 - Events only send in production
-- Check `VITE_POSTHOG_KEY` is set
+- Check `VITE_PUBLIC_POSTHOG_KEY` is set
 - Build with `npm run build` and test with `npm run preview`
 
-### 4. Cache not reducing Firestore reads
+### 3. Cache not reducing Firestore reads
 **Cause**: Cache invalidation happening too often
 **Solution**:
 - Check cache TTL values
@@ -278,5 +216,4 @@ VITE_POSTHOG_HOST=https://app.posthog.com
 
 For issues with monitoring services:
 - **Upstash**: [upstash.com/docs](https://upstash.com/docs)
-- **Sentry**: [docs.sentry.io](https://docs.sentry.io)
 - **PostHog**: [posthog.com/docs](https://posthog.com/docs)

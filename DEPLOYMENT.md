@@ -14,7 +14,6 @@ These services are **optional** - the app works without them but they add produc
 | Service | Purpose | Required? | Cost |
 |---------|---------|-----------|------|
 | **Redis** | Caching for faster API responses | ❌ Optional | Free tier available |
-| **Sentry** | Error tracking & monitoring | ❌ Optional | Free tier (5K errors/month) |
 | **PostHog** | Product analytics | ❌ Optional | Free tier (1M events/month) |
 
 > ⚠️ The app gracefully falls back if these services aren't configured. Set them up later for enhanced production monitoring.
@@ -86,7 +85,6 @@ Add these in Vercel Project Settings → Environment Variables:
 
 | Key | Description | Required |
 |-----|-------------|----------|
-| `VITE_SENTRY_DSN` | Sentry DSN for error tracking | ❌ Optional |
 | `VITE_POSTHOG_KEY` | PostHog project API key | ❌ Optional |
 | `VITE_POSTHOG_HOST` | PostHog host (default: https://app.posthog.com) | ❌ Optional |
 
@@ -164,13 +162,10 @@ Click **Edit** on Environment Variables and add:
 ### Optional Environment Variables for DigitalOcean
 
 | Variable | Value | Encrypt |
-|----------|-------|---------|
+|----------|-------|---------||
 | `REDIS_URL` | Redis connection URL (e.g., `redis://user:pass@host:port`) | ✅ Yes |
-| `SENTRY_DSN` | Sentry DSN for server error tracking | ❌ No |
 
 > 💡 **Redis**: If not configured, the app uses in-memory caching (fine for low-traffic apps)
-> 
-> 💡 **Sentry**: If not configured, errors are logged to console only
 
 **For FIREBASE_SERVICE_ACCOUNT:**
 
@@ -402,21 +397,6 @@ Redis provides faster API responses through caching. Without it, the app uses in
 - The app works fine without Redis
 - In-memory caching handles low to medium traffic
 
-### Sentry (Error Tracking)
-
-Sentry captures and alerts you about production errors.
-
-1. Go to https://sentry.io and create an account
-2. Create a new project (select **Node.js** for backend, **React** for frontend)
-3. Copy the DSN values:
-   - Add `SENTRY_DSN` to DigitalOcean (backend)
-   - Add `VITE_SENTRY_DSN` to Vercel (frontend)
-
-**Free tier includes:**
-- 5,000 errors/month
-- 7-day data retention
-- Email alerts
-
 ### PostHog (Analytics)
 
 PostHog provides product analytics without compromising user privacy.
@@ -445,7 +425,6 @@ PostHog provides product analytics without compromising user privacy.
 
 ### Optional (Enhanced Production)
 - [ ] Redis caching enabled (`REDIS_URL` configured)
-- [ ] Sentry error tracking enabled (`SENTRY_DSN` configured)
 - [ ] PostHog analytics enabled (`VITE_POSTHOG_KEY` configured)
 - [ ] Custom domain configured
 

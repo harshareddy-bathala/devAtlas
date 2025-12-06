@@ -78,7 +78,6 @@ For deployment platforms:
 
 | Variable | Description |
 |----------|-------------|
-| `SENTRY_DSN` | Error tracking |
 | `REDIS_URL` | Session/rate limit storage |
 | `VITE_POSTHOG_KEY` | Analytics |
 
@@ -170,7 +169,6 @@ firebase deploy --only firestore:rules
 | Secret | How to Rotate |
 |--------|---------------|
 | Firebase API Key | Firebase Console → Project Settings → General |
-| Sentry DSN | Sentry → Settings → Client Keys → Rotate |
 | PostHog Key | PostHog → Project Settings → Regenerate |
 | Redis Password | Your Redis provider's dashboard |
 

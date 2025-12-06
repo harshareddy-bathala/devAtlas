@@ -23,7 +23,6 @@ updates:
           - "msw"
       observability:
         patterns:
-          - "@sentry/*"
           - "posthog-js"
           - "@vercel/*"
       build:
@@ -57,9 +56,6 @@ updates:
           - "helmet"
           - "cors"
           - "express-rate-limit"
-      observability:
-        patterns:
-          - "@sentry/*"
       testing:
         patterns:
           - "vitest"
