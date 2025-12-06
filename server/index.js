@@ -47,29 +47,35 @@ const getStyleSrc = (req, res) => {
 };
 
 app.use((req, res, next) => {
+  const cspConfig = {
+    defaultSrc: ["'self'"],
+    scriptSrc: cspScriptSrc,
+    styleSrc: getStyleSrc(req, res),
+    fontSrc: ["'self'", "https://fonts.gstatic.com"],
+    imgSrc: ["'self'", "data:", "https:", "blob:"],
+    connectSrc: [
+      "'self'",
+      "https://*.firebaseapp.com",
+      "https://*.googleapis.com",
+      "https://*.google.com",
+      "https://identitytoolkit.googleapis.com",
+      "https://securetoken.googleapis.com",
+      "wss://*.firebaseio.com"
+    ],
+    frameSrc: ["'none'"],
+    baseUri: ["'self'"],
+    formAction: ["'self'"],
+    objectSrc: ["'none'"]
+  };
+  
+  // Only add upgradeInsecureRequests in production
+  if (!isDev) {
+    cspConfig.upgradeInsecureRequests = [];
+  }
+  
   helmet({
     contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: cspScriptSrc,
-        styleSrc: getStyleSrc(req, res),
-        fontSrc: ["'self'", "https://fonts.gstatic.com"],
-        imgSrc: ["'self'", "data:", "https:", "blob:"],
-        connectSrc: [
-          "'self'",
-          "https://*.firebaseapp.com",
-          "https://*.googleapis.com",
-          "https://*.google.com",
-          "https://identitytoolkit.googleapis.com",
-          "https://securetoken.googleapis.com",
-          "wss://*.firebaseio.com"
-        ],
-        frameSrc: ["'none'"],
-        baseUri: ["'self'"],
-        formAction: ["'self'"],
-        objectSrc: ["'none'"],
-        upgradeInsecureRequests: isDev ? [] : undefined
-      }
+      directives: cspConfig
     },
     crossOriginEmbedderPolicy: false,
     hsts: {
