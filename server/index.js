@@ -258,57 +258,6 @@ app.get('/api/v1/cache-health', asyncHandler(async (req, res) => {
   });
 }));
 
-// PostHog proxy endpoint - bypasses ad blockers by proxying through our backend
-// This allows analytics to work even when PostHog domains are blocked by ad blockers
-app.post('/api/v1/analytics/posthog', asyncHandler(async (req, res) => {
-  try {
-    const posthogHost = process.env.POSTHOG_HOST || 'https://us.i.posthog.com';
-    const targetUrl = `${posthogHost}/e/`;
-    
-    // Forward the exact request to PostHog with the same query params and body
-    const https = require('https');
-    const http = require('http');
-    const url = require('url');
-    
-    const isHttps = targetUrl.startsWith('https');
-    const client = isHttps ? https : http;
-    
-    const parsedUrl = new url.URL(targetUrl + (req.url.includes('?') ? '?' + req.url.split('?')[1] : ''));
-    
-    const options = {
-      hostname: parsedUrl.hostname,
-      path: parsedUrl.pathname + parsedUrl.search,
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      timeout: 5000,
-    };
-    
-    const proxyReq = client.request(options, (proxyRes) => {
-      res.status(proxyRes.statusCode);
-      res.json({ success: true });
-    });
-    
-    proxyReq.on('error', (err) => {
-      console.warn('PostHog proxy error:', err.message);
-      // Don't fail the request - just log the error and continue
-      res.json({ success: true }); // Lie to the client so it doesn't retry
-    });
-    
-    proxyReq.on('timeout', () => {
-      proxyReq.destroy();
-      res.json({ success: true });
-    });
-    
-    proxyReq.write(JSON.stringify(req.body));
-    proxyReq.end();
-  } catch (error) {
-    console.warn('PostHog proxy endpoint error:', error.message);
-    res.json({ success: true }); // Don't fail the request
-  }
-}));
-
 // Helper to format uptime
 function formatUptime(seconds) {
   const days = Math.floor(seconds / 86400);

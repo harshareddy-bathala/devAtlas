@@ -8,45 +8,40 @@ import { PostHogProvider } from 'posthog-js/react'
 
 const root = ReactDOM.createRoot(document.getElementById('root'))
 
-// Determine the PostHog host based on environment
-// In production, use a proxy endpoint to bypass ad blockers
+// Determine the PostHog configuration based on environment
 const getPostHogConfig = () => {
   const apiKey = import.meta.env.VITE_PUBLIC_POSTHOG_KEY
   const isProduction = import.meta.env.PROD
   
+  // Base PostHog configuration (same for both dev and prod)
+  const baseConfig = {
+    defaults: '2025-05-24',
+    capture_exceptions: true,
+    
+    // Privacy settings
+    persistence: 'localStorage',
+    autocapture: false,
+    capture_pageview: true,
+    capture_pageleave: true,
+    disable_session_recording: true,
+    ip: false,
+    respect_dnt: true,
+    
+    property_blacklist: [
+      '$ip',
+      '$device_id',
+    ],
+  }
+  
   if (isProduction) {
-    // In production, route through our backend proxy to bypass ad blockers
-    const apiUrl = import.meta.env.VITE_API_URL || 'https://api.devorbit.com'
+    // In production, use PostHog's CDN directly
+    // The backend proxy is only for specific event endpoints if needed
     return {
       apiKey,
       options: {
-        // Use our backend proxy instead of PostHog's CDN
-        api_host: apiUrl,
-        
-        // Custom request handler to use our proxy endpoint
-        config_request_timeout_ms: 5000,
-        request_batching: {
-          batch_size: 10,
-          batch_timeout_ms: 2000,
-        },
-        
-        defaults: '2025-05-24',
-        capture_exceptions: true,
+        api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com',
         debug: false,
-        
-        // Privacy settings
-        persistence: 'localStorage',
-        autocapture: false,
-        capture_pageview: true,
-        capture_pageleave: true,
-        disable_session_recording: true,
-        ip: false,
-        respect_dnt: true,
-        
-        property_blacklist: [
-          '$ip',
-          '$device_id',
-        ],
+        ...baseConfig,
       }
     }
   } else {
@@ -55,23 +50,8 @@ const getPostHogConfig = () => {
       apiKey,
       options: {
         api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com',
-        defaults: '2025-05-24',
-        capture_exceptions: true,
         debug: true,
-        
-        // Privacy settings
-        persistence: 'localStorage',
-        autocapture: false,
-        capture_pageview: true,
-        capture_pageleave: true,
-        disable_session_recording: true,
-        ip: false,
-        respect_dnt: true,
-        
-        property_blacklist: [
-          '$ip',
-          '$device_id',
-        ],
+        ...baseConfig,
       }
     }
   }
