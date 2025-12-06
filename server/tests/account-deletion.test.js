@@ -141,9 +141,10 @@ describe('Account Deletion', () => {
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       
-      // Verify the delete method was called on the user document
+      // Verify the user profile document was actually deleted
       const userDocRef = mockDb.collection('users').doc(userId);
-      expect(userDocRef.delete).toHaveBeenCalled();
+      const userDocAfterDelete = await userDocRef.get();
+      expect(userDocAfterDelete.exists).toBe(false);
     });
 
     it('should not affect other users\' data', async () => {
