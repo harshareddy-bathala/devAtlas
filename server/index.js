@@ -258,6 +258,47 @@ app.get('/api/v1/cache-health', asyncHandler(async (req, res) => {
   });
 }));
 
+// PostHog proxy endpoint - bypasses ad blockers
+// Forwards analytics events to PostHog backend
+app.all('/api/v1/posthog/*', asyncHandler(async (req, res) => {
+  const fetch = (await import('node-fetch')).default;
+  
+  const posthogHost = 'https://us.i.posthog.com';
+  const pathSegments = req.path.split('/').slice(4); // Remove /api/v1/posthog
+  const path = '/' + pathSegments.join('/');
+  
+  const url = new URL(posthogHost + path);
+  url.search = new URLSearchParams(req.query).toString();
+  
+  try {
+    const options = {
+      method: req.method,
+      headers: {
+        'Content-Type': req.get('content-type') || 'application/json',
+      },
+    };
+    
+    if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
+      options.body = JSON.stringify(req.body);
+    }
+    
+    const response = await fetch(url, options);
+    const data = await response.text();
+    
+    res.status(response.status)
+      .set('Content-Type', response.headers.get('content-type') || 'application/json')
+      .send(data);
+      
+    console.log(`✅ PostHog proxy: ${req.method} ${path} → ${response.status}`);
+  } catch (error) {
+    console.error('❌ PostHog proxy error:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'PostHog proxy failed'
+    });
+  }
+}));
+
 // Helper to format uptime
 function formatUptime(seconds) {
   const days = Math.floor(seconds / 86400);
