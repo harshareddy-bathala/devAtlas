@@ -3,29 +3,8 @@
  */
 
 import '@testing-library/jest-dom';
-import { afterEach, vi } from 'vitest';
+import { afterEach } from 'vitest';
 import { cleanup } from '@testing-library/react';
-
-// Mock PostHog core methods
-vi.mock('posthog-js', () => ({
-  init: vi.fn(),
-  capture: vi.fn(),
-  identify: vi.fn(),
-  screen: vi.fn(),
-}));
-
-// Mock PostHog React integration
-vi.mock('posthog-js/react', () => {
-  const React = require('react');
-  return {
-    PostHogProvider: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children),
-    usePostHog: () => ({
-      capture: vi.fn(),
-      identify: vi.fn(),
-      screen: vi.fn(),
-    }),
-  };
-});
 
 // Cleanup after each test case
 afterEach(() => {

@@ -79,7 +79,6 @@ For deployment platforms:
 | Variable | Description |
 |----------|-------------|
 | `REDIS_URL` | Session/rate limit storage |
-| `VITE_POSTHOG_KEY` | Analytics |
 
 ---
 
@@ -169,7 +168,6 @@ firebase deploy --only firestore:rules
 | Secret | How to Rotate |
 |--------|---------------|
 | Firebase API Key | Firebase Console → Project Settings → General |
-| PostHog Key | PostHog → Project Settings → Regenerate |
 | Redis Password | Your Redis provider's dashboard |
 
 ---
