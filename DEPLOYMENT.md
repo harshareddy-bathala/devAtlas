@@ -159,7 +159,7 @@ Click **Edit** on Environment Variables and add:
 | `NODE_ENV` | `production` | No |
 | `PORT` | `3001` | No |
 | `CORS_ORIGIN` | `https://your-app.vercel.app` | No |
-| `FIREBASE_SERVICE_ACCOUNT` | *(entire JSON content)* | ✅ Yes |
+| `FIREBASE_SERVICE_ACCOUNT` | *(base64-encoded JSON - see below)* | ✅ Yes |
 
 ### Optional Environment Variables for DigitalOcean
 
@@ -173,15 +173,28 @@ Click **Edit** on Environment Variables and add:
 > 💡 **Sentry**: If not configured, errors are logged to console only
 
 **For FIREBASE_SERVICE_ACCOUNT:**
-1. Open your `serviceAccountKey.json` file
-2. Copy the ENTIRE contents (all the JSON)
-3. Paste as the value
-4. Make sure to check "Encrypt" for security
 
-Example (minified):
-```json
-{"type":"service_account","project_id":"devorbit-xxxxx","private_key_id":"abc123...","private_key":"-----BEGIN PRIVATE KEY-----\n...","client_email":"firebase-adminsdk@devorbit-xxxxx.iam.gserviceaccount.com",...}
+The app supports both **raw JSON** and **base64-encoded JSON**. Use **base64** for DigitalOcean to avoid issues with special characters.
+
+**Encode your service account to base64:**
+
+**Windows PowerShell:**
+```powershell
+[Convert]::ToBase64String([System.IO.File]::ReadAllBytes("serviceAccountKey.json"))
 ```
+
+**macOS/Linux:**
+```bash
+base64 -i serviceAccountKey.json | tr -d '\n'
+```
+
+**Steps:**
+1. Run the command above in your terminal (in the `server` folder)
+2. Copy the entire base64 output
+3. Paste as the `FIREBASE_SERVICE_ACCOUNT` value in DigitalOcean
+4. Check "Encrypt" for security
+
+> 💡 The server automatically detects whether the value is raw JSON or base64 and handles it accordingly.
 
 ### 2.5 Configure Health Check
 

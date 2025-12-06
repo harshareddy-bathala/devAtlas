@@ -15,12 +15,24 @@ function initializeFirebase() {
 
   // Try to get service account from environment variable first (RECOMMENDED)
   if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    const envValue = process.env.FIREBASE_SERVICE_ACCOUNT.trim();
+    
     try {
-      serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-      console.log('🔐 Using Firebase service account from environment variable');
+      // Check if it's base64 encoded (doesn't start with '{')
+      if (!envValue.startsWith('{')) {
+        // Decode from base64
+        const decoded = Buffer.from(envValue, 'base64').toString('utf-8');
+        serviceAccount = JSON.parse(decoded);
+        console.log('🔐 Using Firebase service account from environment variable (base64 decoded)');
+      } else {
+        // Parse as raw JSON
+        serviceAccount = JSON.parse(envValue);
+        console.log('🔐 Using Firebase service account from environment variable');
+      }
     } catch (parseError) {
       console.error('❌ Failed to parse FIREBASE_SERVICE_ACCOUNT environment variable');
-      console.error('   Make sure it contains valid JSON');
+      console.error('   Make sure it contains valid JSON or base64-encoded JSON');
+      console.error('   Error:', parseError.message);
       process.exit(1);
     }
   } else {
