@@ -3,7 +3,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm ci",
-  "ignoreCommand": "bash -c \"[[ $VERCEL_GIT_COMMIT_MESSAGE == *'[skip ci]'* || $VERCEL_GIT_COMMIT_MESSAGE == *'[skip deploy]'* ]] && exit 0 || git diff HEAD~1 --quiet -- . ':!*.md' ':!.github' || exit 1\"",
+  "ignoreCommand": "git log --format=%B -n 1 | grep -qE '\\[(skip ci|skip deploy)\\]' && exit 0 || git diff HEAD~1 --quiet -- . ':!*.md' ':!.github'",
   "git": {
     "deploymentEnabled": {
       "main": true,
