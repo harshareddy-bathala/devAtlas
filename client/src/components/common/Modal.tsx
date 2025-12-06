@@ -75,12 +75,12 @@ export function Modal({
 
   const modalContent = (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 animate-fade-in"
       onClick={handleBackdropClick}
       data-testid="modal-backdrop"
     >
       <div
-        className={`glass-card w-full ${SIZE_CLASSES[size]} p-6 m-4 max-h-[90vh] overflow-y-auto`}
+        className={`bg-dark-850 border border-dark-600 rounded-md w-full ${SIZE_CLASSES[size]} p-6 m-4 max-h-[90vh] overflow-y-auto animate-scale-in`}
         data-testid="modal-content"
         role="dialog"
         aria-modal="true"
@@ -88,11 +88,11 @@ export function Modal({
       >
         {/* Header */}
         {(title || showCloseButton) && (
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-6 pb-4 border-b border-dark-600">
             {title && (
               <h2
                 id="modal-title"
-                className="text-xl font-semibold"
+                className="text-xl font-semibold text-white"
                 data-testid="modal-title"
               >
                 {title}
@@ -101,7 +101,7 @@ export function Modal({
             {showCloseButton && (
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-dark-600 rounded-lg transition-colors ml-auto"
+                className="p-2 hover:bg-dark-700 rounded text-light-500 hover:text-white transition-colors ml-auto"
                 aria-label="Close modal"
                 data-testid="modal-close-button"
               >

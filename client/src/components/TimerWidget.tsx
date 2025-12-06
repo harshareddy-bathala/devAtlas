@@ -3,7 +3,6 @@ import { Play, Pause, Clock, X } from 'lucide-react';
 import { timeEntriesApi } from '../lib/api';
 import type { TimeEntry, StartTimerInput, Skill, Project } from '../types';
 import toast from 'react-hot-toast';
-import { useTimerShortcuts } from '../hooks/useKeyboardShortcuts';
 
 interface TimerWidgetProps {
   skills?: Skill[];
@@ -91,7 +90,7 @@ export default function TimerWidget({ skills = [], projects = [], onTimerChange 
     if (!runningEntry) return;
 
     try {
-      const entry = await timeEntriesApi.stop();
+      const entry = await timeEntriesApi.stop(runningEntry.id);
       setRunningEntry(null);
       setCurrentDuration(0);
       onTimerChange?.(null);
@@ -100,13 +99,6 @@ export default function TimerWidget({ skills = [], projects = [], onTimerChange 
       toast.error(error.message || 'Failed to stop timer');
     }
   }, [runningEntry, onTimerChange]);
-
-  // Register keyboard shortcuts
-  useTimerShortcuts(
-    () => setShowStartForm(true),
-    handleStop,
-    !!runningEntry?.isRunning
-  );
 
   if (isLoading) {
     return (

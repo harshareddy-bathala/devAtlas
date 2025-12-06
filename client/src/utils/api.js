@@ -2,12 +2,37 @@ import { auth } from '../lib/firebase';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
 
+// Warn if API_URL doesn't include /v1
+if (import.meta.env.DEV && API_BASE && !API_BASE.endsWith('/v1')) {
+  console.warn(
+    '⚠️ VITE_API_URL should end with /v1\n' +
+    `   Current: ${API_BASE}\n` +
+    '   Expected: http://localhost:3001/api/v1\n' +
+    '   Update your client/.env file to fix API 404 errors.'
+  );
+}
+
 class ApiError extends Error {
-  constructor(message, code, details = null) {
+  constructor(message, code, details = null, retryable = false) {
     super(message);
     this.code = code;
     this.details = details;
+    this.retryable = retryable;
+    this.retryFn = null;
   }
+  
+  // Allow setting a retry function for recoverable errors
+  setRetryFn(fn) {
+    this.retryFn = fn;
+    return this;
+  }
+}
+
+// Determine if an error is retryable
+function isRetryableError(code, statusCode) {
+  const retryableCodes = ['NETWORK_ERROR', 'TIMEOUT', 'RATE_LIMITED', 'SERVICE_UNAVAILABLE'];
+  const retryableStatuses = [408, 429, 500, 502, 503, 504];
+  return retryableCodes.includes(code) || retryableStatuses.includes(statusCode);
 }
 
 // Token cache to avoid unnecessary refreshes
@@ -85,34 +110,51 @@ async function handleResponse(response, returnFullResponse = false) {
   try {
     data = await response.json();
   } catch {
-    throw new ApiError('Server returned invalid response', 'PARSE_ERROR');
+    throw new ApiError('Server returned invalid response', 'PARSE_ERROR', null, true);
   }
   
   if (!response.ok) {
+    const retryable = isRetryableError(data.code, response.status);
+    
     // Handle auth errors
     if (response.status === 401) {
       clearTokenCache();
       throw new ApiError(
         data.error || 'Session expired. Please sign in again.',
-        'UNAUTHORIZED'
+        'UNAUTHORIZED',
+        null,
+        false
       );
     }
     if (response.status === 403) {
       throw new ApiError(
         data.error || 'You do not have permission to perform this action',
-        'FORBIDDEN'
+        'FORBIDDEN',
+        null,
+        false
       );
     }
     if (response.status === 429) {
       throw new ApiError(
         'Too many requests. Please wait a moment and try again.',
-        'RATE_LIMITED'
+        'RATE_LIMITED',
+        null,
+        true // Rate limit errors are retryable after waiting
+      );
+    }
+    if (response.status >= 500) {
+      throw new ApiError(
+        data.error || 'Server error. Please try again.',
+        data.code || 'SERVER_ERROR',
+        data.details,
+        true // Server errors are often transient
       );
     }
     throw new ApiError(
       data.error || 'An error occurred',
       data.code || 'UNKNOWN_ERROR',
-      data.details
+      data.details,
+      retryable
     );
   }
   
@@ -128,46 +170,62 @@ async function handleResponse(response, returnFullResponse = false) {
 }
 
 async function fetchWithAuth(url, options = {}, retryCount = 0) {
-  try {
-    const token = await getValidToken(retryCount > 0);
-    
-    const headers = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-      ...options.headers
-    };
+  const makeRequest = async () => {
+    try {
+      const token = await getValidToken(retryCount > 0);
+      
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        ...options.headers
+      };
 
-    const response = await fetch(`${API_BASE}${url}`, {
-      ...options,
-      headers
-    });
+      const response = await fetch(`${API_BASE}${url}`, {
+        ...options,
+        headers
+      });
+      
+      // If unauthorized and haven't retried, try once with fresh token
+      if (response.status === 401 && retryCount === 0) {
+        clearTokenCache();
+        return fetchWithAuth(url, options, 1);
+      }
+      
+      return handleResponse(response);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        // Attach retry function to retryable errors
+        if (error.retryable) {
+          error.setRetryFn(() => fetchWithAuth(url, options, 0));
+        }
+        throw error;
+      }
+      
+      // Network error handling
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        const networkError = new ApiError(
+          'Unable to connect to server. Please check your connection.',
+          'NETWORK_ERROR',
+          null,
+          true
+        );
+        networkError.setRetryFn(() => fetchWithAuth(url, options, 0));
+        throw networkError;
+      }
     
-    // If unauthorized and haven't retried, try once with fresh token
-    if (response.status === 401 && retryCount === 0) {
-      clearTokenCache();
-      return fetchWithAuth(url, options, 1);
-    }
-    
-    return handleResponse(response);
-  } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
-    
-    // Network error handling
-    if (error.name === 'TypeError' && error.message.includes('fetch')) {
-      throw new ApiError(
-        'Unable to connect to server. Please check your connection.',
-        'NETWORK_ERROR'
+      console.error('API Error:', error);
+      const genericError = new ApiError(
+        error.message || 'Network error. Please check your connection.',
+        'NETWORK_ERROR',
+        null,
+        true
       );
+      genericError.setRetryFn(() => fetchWithAuth(url, options, 0));
+      throw genericError;
     }
-    
-    console.error('API Error:', error);
-    throw new ApiError(
-      error.message || 'Network error. Please check your connection.',
-      'NETWORK_ERROR'
-    );
-  }
+  };
+  
+  return makeRequest();
 }
 
 const api = {
@@ -349,24 +407,6 @@ const api = {
     return fetchWithAuth('/activities', {
       method: 'POST',
       body: JSON.stringify(data)
-    });
-  },
-
-  // Export/Import (kept for backward compatibility but deprecated)
-  async exportData() {
-    return fetchWithAuth('/export');
-  },
-
-  async importData(data) {
-    return fetchWithAuth('/import', {
-      method: 'POST',
-      body: JSON.stringify(data)
-    });
-  },
-
-  async clearAllData() {
-    return fetchWithAuth('/data', {
-      method: 'DELETE'
     });
   },
   

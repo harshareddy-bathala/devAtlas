@@ -2,13 +2,14 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const { initializeFirebase, verifyIdToken, getOrCreateUser, getAuth, getDb, admin } = require('./firebase');
-const db = require('./firestore');
+const db = require('./db'); // Use new modular database layer
 const { getCached, invalidateCache, invalidateUserCache, isCacheAvailable } = require('./cache');
-const { initSentry, setSentryUser, captureException } = require('./sentry');
-const { skillSchema, projectSchema, resourceSchema, activitySchema, idParamSchema, profileSchema } = require('./validation');
-const { validate, validateParams, asyncHandler, errorHandler, requestLogger, sanitize } = require('./middleware');
+const { initSentry, setSentryUser, captureException, addBreadcrumb } = require('./sentry');
+const { skillSchema, projectSchema, resourceSchema, activitySchema, idParamSchema, profileSchema, paginationSchema } = require('./validation');
+const { validate, validateParams, validateQuery, asyncHandler, errorHandler, requestLogger, sanitize, requestIdMiddleware } = require('./middleware');
 const { NotFoundError, UnauthorizedError, ValidationError } = require('./errors');
 
 const app = express();
@@ -22,45 +23,62 @@ initializeFirebase();
 const { requestHandler: sentryRequestHandler, errorHandler: sentryErrorHandler } = initSentry(app);
 app.use(sentryRequestHandler);
 
+// Request ID middleware (for correlation)
+app.use(requestIdMiddleware);
+
 // Security middleware with proper CSP
-// In production, we use stricter CSP without 'unsafe-inline'
-// In development, we allow 'unsafe-inline' for easier debugging with HMR
+// Generate nonce for inline styles (more secure than unsafe-inline)
+app.use((req, res, next) => {
+  res.locals.nonce = crypto.randomBytes(16).toString('base64');
+  next();
+});
+
 const cspScriptSrc = isDev 
   ? ["'self'", "'unsafe-inline'"] // Dev: allow inline for HMR/debugging
   : ["'self'"]; // Prod: strict CSP, no inline scripts
 
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: cspScriptSrc,
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"], // Styles often need inline for CSS-in-JS
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "https:", "blob:"],
-      connectSrc: [
-        "'self'",
-        "https://*.firebaseapp.com",
-        "https://*.googleapis.com",
-        "https://*.google.com",
-        "https://identitytoolkit.googleapis.com",
-        "https://securetoken.googleapis.com",
-        "wss://*.firebaseio.com"
-      ],
-      frameSrc: ["'none'"],
-      baseUri: ["'self'"],
-      formAction: ["'self'"],
-      objectSrc: ["'none'"],
-      upgradeInsecureRequests: isDev ? [] : undefined // Only upgrade in production
-    }
-  },
-  crossOriginEmbedderPolicy: false,
-  // HSTS - HTTP Strict Transport Security
-  hsts: {
-    maxAge: 31536000, // 1 year in seconds
-    includeSubDomains: true,
-    preload: true
+// For styles, we use nonce-based CSP in production
+const getStyleSrc = (req, res) => {
+  if (isDev) {
+    return ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"];
   }
-}));
+  // In production, use nonce for inline styles
+  return ["'self'", `'nonce-${res.locals.nonce}'`, "https://fonts.googleapis.com"];
+};
+
+app.use((req, res, next) => {
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: cspScriptSrc,
+        styleSrc: getStyleSrc(req, res),
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        imgSrc: ["'self'", "data:", "https:", "blob:"],
+        connectSrc: [
+          "'self'",
+          "https://*.firebaseapp.com",
+          "https://*.googleapis.com",
+          "https://*.google.com",
+          "https://identitytoolkit.googleapis.com",
+          "https://securetoken.googleapis.com",
+          "wss://*.firebaseio.com"
+        ],
+        frameSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+        objectSrc: ["'none'"],
+        upgradeInsecureRequests: isDev ? [] : undefined
+      }
+    },
+    crossOriginEmbedderPolicy: false,
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true
+    }
+  })(req, res, next);
+});
 
 // CORS configuration
 const corsOptions = {
@@ -568,24 +586,18 @@ app.get('/api/v1/stats/progress', authMiddleware, asyncHandler(async (req, res) 
   res.json({ success: true, data: progress });
 }));
 
-// ============ DATA EXPORT/IMPORT ============
-app.get('/api/v1/export', authMiddleware, asyncHandler(async (req, res) => {
-  const exportData = await db.exportData(req.user.id);
-  res.json({ success: true, data: exportData });
-}));
-
-app.post('/api/v1/import', authMiddleware, asyncHandler(async (req, res) => {
-  const result = await db.importData(req.user.id, req.body);
-  res.json({ success: true, message: 'Data imported successfully', ...result });
-}));
-
-app.delete('/api/v1/data', authMiddleware, asyncHandler(async (req, res) => {
-  const result = await db.clearAllData(req.user.id);
-  res.json({ success: true, message: 'All data cleared successfully', ...result });
-}));
-
-// 404 handler
+// 404 handler with helpful API version message
 app.use((req, res) => {
+  // Check if the request is to /api/ without /v1
+  if (req.path.startsWith('/api/') && !req.path.startsWith('/api/v1/')) {
+    return res.status(404).json({ 
+      success: false, 
+      error: 'API version required. Use /api/v1/ prefix',
+      code: 'API_VERSION_MISSING',
+      hint: 'Update VITE_API_URL to include /v1 (e.g., http://localhost:3001/api/v1)'
+    });
+  }
+  
   res.status(404).json({ 
     success: false, 
     error: 'Endpoint not found',

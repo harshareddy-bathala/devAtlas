@@ -46,6 +46,15 @@ function initSentry(app) {
       return removePII(event);
     },
     
+    // Add breadcrumb filtering
+    beforeBreadcrumb(breadcrumb, hint) {
+      // Filter out noisy breadcrumbs
+      if (breadcrumb.category === 'console' && breadcrumb.level === 'debug') {
+        return null;
+      }
+      return scrubBreadcrumb(breadcrumb);
+    },
+    
     // Filter out known non-actionable errors
     ignoreErrors: [
       // Network errors
@@ -89,6 +98,48 @@ function noopMiddleware(req, res, next) {
 }
 
 /**
+ * Scrub sensitive data from a single breadcrumb
+ */
+function scrubBreadcrumb(breadcrumb) {
+  if (!breadcrumb) return breadcrumb;
+  
+  // Remove authorization headers
+  if (breadcrumb.data?.headers?.authorization) {
+    breadcrumb.data.headers.authorization = '[REDACTED]';
+  }
+  
+  // Remove sensitive URL parameters
+  if (breadcrumb.data?.url) {
+    breadcrumb.data.url = scrubUrl(breadcrumb.data.url);
+  }
+  
+  // Scrub message content
+  if (breadcrumb.message) {
+    breadcrumb.message = scrubMessage(breadcrumb.message);
+  }
+  
+  return breadcrumb;
+}
+
+/**
+ * Scrub sensitive content from log messages
+ */
+function scrubMessage(message) {
+  if (!message || typeof message !== 'string') return message;
+  
+  // Redact email patterns
+  message = message.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[EMAIL]');
+  
+  // Redact JWT-like tokens
+  message = message.replace(/eyJ[a-zA-Z0-9_-]*\.eyJ[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]*/g, '[TOKEN]');
+  
+  // Redact API keys (common patterns)
+  message = message.replace(/(?:api[_-]?key|apikey|key|token|secret)[=:]["']?[a-zA-Z0-9_-]{20,}["']?/gi, '[API_KEY]');
+  
+  return message;
+}
+
+/**
  * Remove PII from Sentry events
  */
 function removePII(event) {
@@ -101,19 +152,9 @@ function removePII(event) {
 
   // Scrub sensitive data from breadcrumbs
   if (event.breadcrumbs) {
-    event.breadcrumbs = event.breadcrumbs.map((breadcrumb) => {
-      // Remove authorization headers
-      if (breadcrumb.data?.headers?.authorization) {
-        breadcrumb.data.headers.authorization = '[REDACTED]';
-      }
-      
-      // Remove sensitive URL parameters
-      if (breadcrumb.data?.url) {
-        breadcrumb.data.url = scrubUrl(breadcrumb.data.url);
-      }
-      
-      return breadcrumb;
-    });
+    event.breadcrumbs = event.breadcrumbs
+      .map(scrubBreadcrumb)
+      .filter(Boolean);
   }
 
   // Scrub request data
@@ -143,6 +184,22 @@ function removePII(event) {
   // Scrub extra data that might contain PII
   if (event.extra) {
     event.extra = scrubObject(event.extra);
+  }
+  
+  // Add sanitized context for debugging
+  if (event.contexts) {
+    // Add request path for context (already sanitized URL)
+    if (event.request?.url) {
+      try {
+        const url = new URL(event.request.url);
+        event.contexts.route = {
+          path: url.pathname,
+          method: event.request.method
+        };
+      } catch {
+        // Ignore URL parsing errors
+      }
+    }
   }
 
   return event;

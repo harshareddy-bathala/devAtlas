@@ -9,19 +9,30 @@ import Layout from './components/Layout';
 import { Loader2 } from 'lucide-react';
 
 // Lazy load page components for code splitting
+const Landing = lazy(() => import('./pages/Landing'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const StackTracker = lazy(() => import('./pages/StackTracker'));
 const Projects = lazy(() => import('./pages/Projects'));
 const Resources = lazy(() => import('./pages/Resources'));
 const Settings = lazy(() => import('./pages/Settings'));
 const LoginPage = lazy(() => import('./pages/Login'));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPassword'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
 
 // Page loader component for Suspense fallback
 function PageLoader() {
   return (
     <div className="min-h-[50vh] flex items-center justify-center">
-      <Loader2 className="w-8 h-8 animate-spin text-accent-blue" />
+      <Loader2 className="w-8 h-8 animate-spin text-accent-primary" />
+    </div>
+  );
+}
+
+// Full page loader for auth checks
+function FullPageLoader() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-dark-900">
+      <Loader2 className="w-8 h-8 animate-spin text-accent-primary" />
     </div>
   );
 }
@@ -32,11 +43,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isOnboarded, isChecking } = useOnboarding();
 
   if (isLoading || isChecking) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-dark-900">
-        <Loader2 className="w-8 h-8 animate-spin text-accent-blue" />
-      </div>
-    );
+    return <FullPageLoader />;
   }
 
   if (!user) {
@@ -57,11 +64,7 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
   const { isOnboarded, isChecking } = useOnboarding();
 
   if (isLoading || isChecking) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-dark-900">
-        <Loader2 className="w-8 h-8 animate-spin text-accent-blue" />
-      </div>
-    );
+    return <FullPageLoader />;
   }
 
   if (!user) {
@@ -70,7 +73,7 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
 
   // If already onboarded, go to dashboard
   if (isOnboarded) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;
@@ -82,11 +85,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   const { isOnboarded, isChecking } = useOnboarding();
 
   if (isLoading || isChecking) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-dark-900">
-        <Loader2 className="w-8 h-8 animate-spin text-accent-blue" />
-      </div>
-    );
+    return <FullPageLoader />;
   }
 
   if (user) {
@@ -94,22 +93,53 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
     if (!isOnboarded) {
       return <Navigate to="/onboarding" replace />;
     }
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;
+}
+
+// Landing page route - shows landing for unauthenticated, redirects authenticated users
+function LandingRoute() {
+  const { user, isLoading } = useAuth();
+  const { isOnboarded, isChecking } = useOnboarding();
+
+  if (isLoading || isChecking) {
+    return <FullPageLoader />;
+  }
+
+  if (user) {
+    // Redirect to onboarding if not completed, otherwise dashboard
+    if (!isOnboarded) {
+      return <Navigate to="/onboarding" replace />;
+    }
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <Landing />;
 }
 
 function AppRoutes() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
+        {/* Landing page - public facing */}
+        <Route path="/" element={<LandingRoute />} />
+
         {/* Public routes */}
         <Route
           path="/login"
           element={
             <PublicRoute>
               <LoginPage />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/forgot-password"
+          element={
+            <PublicRoute>
+              <ForgotPasswordPage />
             </PublicRoute>
           }
         />
@@ -126,7 +156,7 @@ function AppRoutes() {
 
         {/* Protected routes */}
         <Route
-          path="/"
+          path="/dashboard"
           element={
             <ProtectedRoute>
               <Dashboard />
@@ -166,7 +196,7 @@ function AppRoutes() {
           }
         />
 
-        {/* Catch all - redirect to dashboard */}
+        {/* Catch all - redirect to landing */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
@@ -187,33 +217,32 @@ export default function App() {
             >
               <AppRoutes />
               <Toaster
-              position="bottom-right"
-              toastOptions={{
-                duration: 4000,
-                className: 'bg-dark-700 text-white border border-dark-500',
-                style: {
-                  background: 'var(--toast-bg, #1a1b23)',
-                  color: 'var(--toast-color, #fff)',
-                  border: '1px solid var(--toast-border, #2a2b35)',
-                },
-                success: {
-                  iconTheme: {
-                    primary: '#22c55e',
-                    secondary: '#fff',
+                position="bottom-right"
+                toastOptions={{
+                  duration: 4000,
+                  style: {
+                    background: '#18181B',
+                    color: '#FAFAFA',
+                    border: '1px solid #27272A',
                   },
-                },
-                error: {
-                  iconTheme: {
-                    primary: '#ef4444',
-                    secondary: '#fff',
+                  success: {
+                    iconTheme: {
+                      primary: '#22C55E',
+                      secondary: '#FAFAFA',
+                    },
                   },
-                },
-              }}
-/>
-          </BrowserRouter>
-        </OnboardingProvider>
-      </AuthProvider>
-    </ThemeProvider>
-  </ErrorBoundary>
-);
+                  error: {
+                    iconTheme: {
+                      primary: '#EF4444',
+                      secondary: '#FAFAFA',
+                    },
+                  },
+                }}
+              />
+            </BrowserRouter>
+          </OnboardingProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
+  );
 }

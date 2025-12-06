@@ -42,28 +42,6 @@ export default function SearchFilter({
     onSearchChange(debouncedSearch);
   }, [debouncedSearch, onSearchChange]);
 
-  // Keyboard shortcut for search
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (
-        e.key === '/' &&
-        !e.ctrlKey &&
-        !e.altKey &&
-        !e.metaKey &&
-        !(
-          e.target instanceof HTMLInputElement ||
-          e.target instanceof HTMLTextAreaElement
-        )
-      ) {
-        e.preventDefault();
-        inputRef.current?.focus();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
   // Close filters on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {

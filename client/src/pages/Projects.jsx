@@ -23,19 +23,19 @@ const projectFormSchema = z.object({
 const STATUS_CONFIG = {
   idea: { 
     label: 'Ideas', 
-    color: 'bg-accent-orange/20 text-accent-orange border-accent-orange/30',
+    color: 'bg-[#F59E0B]/15 text-[#F59E0B] border border-[#F59E0B]/30',
     icon: Lightbulb,
     description: 'Future project concepts'
   },
   active: { 
     label: 'In Progress', 
-    color: 'bg-accent-blue/20 text-accent-blue border-accent-blue/30',
+    color: 'bg-[#3B82F6]/15 text-[#3B82F6] border border-[#3B82F6]/30',
     icon: Rocket,
     description: 'Currently building'
   },
   completed: { 
     label: 'Completed', 
-    color: 'bg-accent-green/20 text-accent-green border-accent-green/30',
+    color: 'bg-[#22C55E]/15 text-[#22C55E] border border-[#22C55E]/30',
     icon: CheckCircle,
     description: 'Shipped & done'
   }
@@ -236,8 +236,8 @@ function Projects() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Projects</h1>
-          <p className="text-gray-400">From idea to deployment - track your builds</p>
+          <h1 className="text-3xl font-bold mb-2 text-white">Projects</h1>
+          <p className="text-light-500">From idea to deployment - track your builds</p>
         </div>
         <button onClick={() => openModal()} className="btn-primary flex items-center gap-2">
           <Plus className="w-4 h-4" />
@@ -252,16 +252,16 @@ function Projects() {
           const statusProjects = groupedProjects[status];
           
           return (
-            <div key={status} className="glass-card p-4">
-              <div className={`flex items-center gap-2 mb-4 pb-3 border-b border-dark-600`}>
-                <div className={`p-2 rounded-lg ${config.color.split(' ')[0]}`}>
+            <div key={status} className="bg-dark-800 border border-dark-600 rounded p-4">
+              <div className="flex items-center gap-2 mb-4 pb-3 border-b border-dark-600">
+                <div className={`p-2 rounded ${config.color.split(' ')[0]}`}>
                   <Icon className={`w-4 h-4 ${config.color.split(' ')[1]}`} />
                 </div>
                 <div>
-                  <h2 className="font-semibold">{config.label}</h2>
-                  <p className="text-xs text-gray-500">{config.description}</p>
+                  <h2 className="font-semibold text-white">{config.label}</h2>
+                  <p className="text-xs text-light-500">{config.description}</p>
                 </div>
-                <span className="ml-auto text-sm text-gray-500 bg-dark-600 px-2 py-0.5 rounded-full">
+                <span className="ml-auto text-sm text-light-500 bg-dark-700 px-2 py-0.5 rounded">
                   {statusProjects.length}
                 </span>
               </div>
@@ -270,16 +270,16 @@ function Projects() {
                 {statusProjects.map(project => (
                   <div 
                     key={project.id} 
-                    className="group bg-dark-700/50 rounded-lg p-4 hover:bg-dark-700 transition-colors"
+                    className="group bg-dark-700 border border-dark-600 rounded p-4 hover:border-dark-500 transition-colors"
                   >
                     <div className="flex items-start justify-between mb-2">
-                      <h3 className="font-medium">{project.name}</h3>
+                      <h3 className="font-medium text-white">{project.name}</h3>
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
                         <button 
                           onClick={() => openModal(project)}
                           className="p-1.5 hover:bg-dark-500 rounded"
                         >
-                          <Edit2 className="w-3.5 h-3.5 text-gray-400" />
+                          <Edit2 className="w-3.5 h-3.5 text-light-400" />
                         </button>
                         <button 
                           onClick={() => setDeleteConfirm({ open: true, project })}
@@ -291,7 +291,7 @@ function Projects() {
                     </div>
                     
                     {project.description && (
-                      <p className="text-sm text-gray-400 mb-3 line-clamp-2">{project.description}</p>
+                      <p className="text-sm text-light-500 mb-3 line-clamp-2">{project.description}</p>
                     )}
                     
                     {/* Tech Stack */}
@@ -300,7 +300,7 @@ function Projects() {
                         {project.tech_stack.split(',').map((tech, i) => (
                           <span 
                             key={i} 
-                            className="text-xs px-2 py-0.5 bg-dark-600 rounded-full text-gray-300"
+                            className="text-xs px-2 py-0.5 bg-dark-600 rounded text-light-300"
                           >
                             {tech.trim()}
                           </span>
@@ -315,7 +315,7 @@ function Projects() {
                           href={project.github_url} 
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors"
+                          className="flex items-center gap-1 text-xs text-light-400 hover:text-white transition-colors"
                         >
                           <Github className="w-3.5 h-3.5" />
                           GitHub
@@ -326,7 +326,7 @@ function Projects() {
                           href={project.demo_url} 
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors"
+                          className="flex items-center gap-1 text-xs text-light-400 hover:text-white transition-colors"
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
                           Demo
@@ -343,7 +343,7 @@ function Projects() {
                           className={`flex-1 text-xs py-1 rounded transition-colors ${
                             project.status === s 
                               ? c.color 
-                              : 'bg-dark-600 text-gray-500 hover:text-gray-300'
+                              : 'bg-dark-600 text-light-500 hover:text-light-300'
                           }`}
                         >
                           {c.label}
@@ -354,7 +354,7 @@ function Projects() {
                 ))}
                 
                 {statusProjects.length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
+                  <div className="text-center py-8 text-light-500">
                     <p className="text-sm">No projects here yet</p>
                   </div>
                 )}
@@ -373,7 +373,7 @@ function Projects() {
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Project Name</label>
+            <label className="block text-sm text-light-400 mb-2">Project Name</label>
             <input
               type="text"
               {...register('name')}
@@ -386,7 +386,7 @@ function Projects() {
           </div>
           
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Description</label>
+            <label className="block text-sm text-light-400 mb-2">Description</label>
             <textarea
               {...register('description')}
               className={`input-field min-h-[80px] resize-none ${errors.description ? 'border-red-500 focus:ring-red-500' : ''}`}
@@ -398,7 +398,7 @@ function Projects() {
           </div>
           
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Status</label>
+            <label className="block text-sm text-light-400 mb-2">Status</label>
             <select {...register('status')} className="input-field">
               {Object.entries(STATUS_CONFIG).map(([value, { label }]) => (
                 <option key={value} value={value}>{label}</option>
@@ -407,7 +407,7 @@ function Projects() {
           </div>
           
           <div>
-            <label className="block text-sm text-gray-400 mb-2">
+            <label className="block text-sm text-light-400 mb-2">
               <Github className="w-4 h-4 inline mr-1" />
               GitHub URL
             </label>
@@ -423,7 +423,7 @@ function Projects() {
           </div>
           
           <div>
-            <label className="block text-sm text-gray-400 mb-2">
+            <label className="block text-sm text-light-400 mb-2">
               <ExternalLink className="w-4 h-4 inline mr-1" />
               Demo URL
             </label>
@@ -439,7 +439,7 @@ function Projects() {
           </div>
           
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Tech Stack</label>
+            <label className="block text-sm text-light-400 mb-2">Tech Stack</label>
             <input
               type="text"
               {...register('techStack')}

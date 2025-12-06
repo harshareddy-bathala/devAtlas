@@ -3,7 +3,7 @@
  */
 
 import '@testing-library/jest-dom';
-import { afterEach } from 'vitest';
+import { afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 
 // Cleanup after each test case
@@ -51,3 +51,50 @@ Object.defineProperty(window, 'ResizeObserver', {
   configurable: true,
   value: MockResizeObserver,
 });
+
+// Mock Firebase
+vi.mock('../lib/firebase', () => ({
+  auth: {
+    currentUser: null,
+    onAuthStateChanged: vi.fn(),
+  },
+  signIn: vi.fn(),
+  signUp: vi.fn(),
+  signOut: vi.fn(),
+  signInWithGoogle: vi.fn(),
+  signInWithGitHub: vi.fn(),
+  getIdToken: vi.fn().mockResolvedValue('mock-token'),
+  onAuthChange: vi.fn(),
+  reauthenticate: vi.fn(),
+  changePassword: vi.fn(),
+  sendResetEmail: vi.fn(),
+  deleteAccount: vi.fn(),
+  reauthenticateWithProvider: vi.fn(),
+  linkGitHubAccount: vi.fn(),
+  unlinkProvider: vi.fn(),
+  getLinkedProviders: vi.fn().mockReturnValue([]),
+  isEmailProvider: vi.fn().mockReturnValue(true),
+}));
+
+// Mock react-hot-toast
+vi.mock('react-hot-toast', () => ({
+  default: {
+    success: vi.fn(),
+    error: vi.fn(),
+    loading: vi.fn(),
+    dismiss: vi.fn(),
+  },
+  Toaster: () => null,
+}));
+
+// Mock API
+vi.mock('../utils/api', () => ({
+  default: {
+    getStats: vi.fn().mockResolvedValue({}),
+    getHeatmapData: vi.fn().mockResolvedValue([]),
+    getProgressData: vi.fn().mockResolvedValue({}),
+    getSkills: vi.fn().mockResolvedValue([]),
+    getProjects: vi.fn().mockResolvedValue([]),
+    getResources: vi.fn().mockResolvedValue([]),
+  },
+}));

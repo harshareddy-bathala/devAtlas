@@ -21,12 +21,12 @@ const resourceFormSchema = z.object({
 });
 
 const TYPE_CONFIG = {
-  documentation: { label: 'Documentation', icon: FileText, color: 'text-accent-blue' },
-  video: { label: 'Video', icon: Video, color: 'text-accent-orange' },
-  course: { label: 'Course', icon: BookOpen, color: 'text-accent-purple' },
-  article: { label: 'Article', icon: FileText, color: 'text-accent-cyan' },
-  tutorial: { label: 'Tutorial', icon: Code, color: 'text-accent-green' },
-  other: { label: 'Other', icon: LinkIcon, color: 'text-gray-400' }
+  documentation: { label: 'Documentation', icon: FileText, color: 'text-[#3B82F6]' },
+  video: { label: 'Video', icon: Video, color: 'text-[#F59E0B]' },
+  course: { label: 'Course', icon: BookOpen, color: 'text-[#8B5CF6]' },
+  article: { label: 'Article', icon: FileText, color: 'text-[#06B6D4]' },
+  tutorial: { label: 'Tutorial', icon: Code, color: 'text-[#22C55E]' },
+  other: { label: 'Other', icon: LinkIcon, color: 'text-light-400' }
 };
 
 // Resource Card Component (for grid view)
@@ -35,9 +35,9 @@ function ResourceCard({ resource, onEdit, onDelete, getDomain }) {
   const Icon = typeConfig.icon;
   
   return (
-    <div className="glass-card p-4 group hover:border-dark-500 transition-colors">
+    <div className="bg-dark-800 border border-dark-600 rounded p-4 group hover:border-dark-500 transition-colors">
       <div className="flex items-start justify-between mb-3">
-        <div className="p-2 rounded-lg bg-dark-600">
+        <div className="p-2 rounded bg-dark-700">
           <Icon className={`w-4 h-4 ${typeConfig.color}`} />
         </div>
         <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
@@ -45,7 +45,7 @@ function ResourceCard({ resource, onEdit, onDelete, getDomain }) {
             onClick={() => onEdit(resource)}
             className="p-1.5 hover:bg-dark-500 rounded"
           >
-            <Edit2 className="w-3.5 h-3.5 text-gray-400" />
+            <Edit2 className="w-3.5 h-3.5 text-light-400" />
           </button>
           <button 
             onClick={() => onDelete(resource)}
@@ -56,22 +56,22 @@ function ResourceCard({ resource, onEdit, onDelete, getDomain }) {
         </div>
       </div>
       
-      <h3 className="font-medium mb-1 line-clamp-2">{resource.title}</h3>
-      <p className="text-xs text-gray-500 mb-3">{getDomain(resource.url)}</p>
+      <h3 className="font-medium mb-1 line-clamp-2 text-white">{resource.title}</h3>
+      <p className="text-xs text-light-500 mb-3">{getDomain(resource.url)}</p>
       
       {resource.notes && (
-        <p className="text-sm text-gray-400 mb-3 line-clamp-2">{resource.notes}</p>
+        <p className="text-sm text-light-400 mb-3 line-clamp-2">{resource.notes}</p>
       )}
       
       {/* Tags */}
       <div className="flex flex-wrap gap-1 mb-3">
         {resource.skill_name && (
-          <span className="text-xs px-2 py-0.5 bg-accent-blue/20 text-accent-blue rounded-full">
+          <span className="text-xs px-2 py-0.5 bg-[#3B82F6]/15 text-[#3B82F6] rounded">
             {resource.skill_name}
           </span>
         )}
         {resource.project_name && (
-          <span className="text-xs px-2 py-0.5 bg-accent-purple/20 text-accent-purple rounded-full">
+          <span className="text-xs px-2 py-0.5 bg-[#8B5CF6]/15 text-[#8B5CF6] rounded">
             {resource.project_name}
           </span>
         )}
@@ -81,7 +81,7 @@ function ResourceCard({ resource, onEdit, onDelete, getDomain }) {
         href={resource.url} 
         target="_blank" 
         rel="noopener noreferrer"
-        className="flex items-center gap-1 text-sm text-accent-cyan hover:text-accent-blue transition-colors"
+        className="flex items-center gap-1 text-sm text-[#06B6D4] hover:text-[#3B82F6] transition-colors"
       >
         <ExternalLink className="w-4 h-4" />
         Open Resource
@@ -96,31 +96,31 @@ function ResourceListItem({ resource, onEdit, onDelete, getDomain }) {
   const Icon = typeConfig.icon;
   
   return (
-    <div className="flex items-center gap-4 p-4 hover:bg-dark-700/50 transition-colors group h-[120px]">
-      <div className="p-2 rounded-lg bg-dark-600 shrink-0">
+    <div className="flex items-center gap-4 p-4 hover:bg-dark-700 transition-colors group h-[120px]">
+      <div className="p-2 rounded bg-dark-700 shrink-0">
         <Icon className={`w-5 h-5 ${typeConfig.color}`} />
       </div>
       
       <div className="flex-1 min-w-0">
-        <h3 className="font-medium truncate">{resource.title}</h3>
-        <p className="text-xs text-gray-500">{getDomain(resource.url)}</p>
+        <h3 className="font-medium truncate text-white">{resource.title}</h3>
+        <p className="text-xs text-light-500">{getDomain(resource.url)}</p>
         
         {resource.notes && (
-          <p className="text-sm text-gray-400 mt-1 line-clamp-1">{resource.notes}</p>
+          <p className="text-sm text-light-400 mt-1 line-clamp-1">{resource.notes}</p>
         )}
         
         {/* Tags */}
         <div className="flex flex-wrap gap-1 mt-2">
-          <span className={`text-xs px-2 py-0.5 rounded-full ${typeConfig.color.replace('text-', 'bg-').replace('-cyan', '-cyan/20').replace('-blue', '-blue/20').replace('-orange', '-orange/20').replace('-purple', '-purple/20').replace('-green', '-green/20').replace('-gray-400', '-gray-500/20')} ${typeConfig.color}`}>
+          <span className={`text-xs px-2 py-0.5 rounded bg-dark-600 ${typeConfig.color}`}>
             {typeConfig.label}
           </span>
           {resource.skill_name && (
-            <span className="text-xs px-2 py-0.5 bg-accent-blue/20 text-accent-blue rounded-full">
+            <span className="text-xs px-2 py-0.5 bg-[#3B82F6]/15 text-[#3B82F6] rounded">
               {resource.skill_name}
             </span>
           )}
           {resource.project_name && (
-            <span className="text-xs px-2 py-0.5 bg-accent-purple/20 text-accent-purple rounded-full">
+            <span className="text-xs px-2 py-0.5 bg-[#8B5CF6]/15 text-[#8B5CF6] rounded">
               {resource.project_name}
             </span>
           )}
@@ -132,21 +132,21 @@ function ResourceListItem({ resource, onEdit, onDelete, getDomain }) {
           href={resource.url} 
           target="_blank" 
           rel="noopener noreferrer"
-          className="p-2 hover:bg-dark-600 rounded-lg transition-colors"
+          className="p-2 hover:bg-dark-600 rounded transition-colors"
           title="Open Resource"
         >
-          <ExternalLink className="w-4 h-4 text-accent-cyan" />
+          <ExternalLink className="w-4 h-4 text-[#06B6D4]" />
         </a>
         <button 
           onClick={() => onEdit(resource)}
-          className="p-2 hover:bg-dark-600 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+          className="p-2 hover:bg-dark-600 rounded transition-colors opacity-0 group-hover:opacity-100"
           title="Edit"
         >
-          <Edit2 className="w-4 h-4 text-gray-400" />
+          <Edit2 className="w-4 h-4 text-light-400" />
         </button>
         <button 
           onClick={() => onDelete(resource)}
-          className="p-2 hover:bg-red-500/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+          className="p-2 hover:bg-red-500/20 rounded transition-colors opacity-0 group-hover:opacity-100"
           title="Delete"
         >
           <Trash2 className="w-4 h-4 text-red-400" />
@@ -301,8 +301,8 @@ function Resources() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Resources</h1>
-          <p className="text-gray-400">Your learning library - courses, docs, and tutorials</p>
+          <h1 className="text-3xl font-bold mb-2 text-white">Resources</h1>
+          <p className="text-light-500">Your learning library - courses, docs, and tutorials</p>
         </div>
         <button onClick={() => openModal()} className="btn-primary flex items-center gap-2">
           <Plus className="w-4 h-4" />
@@ -315,10 +315,10 @@ function Resources() {
         <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => setFilter('all')}
-            className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+            className={`px-4 py-2 rounded text-sm transition-colors ${
               filter === 'all' 
-                ? 'bg-accent-purple text-white' 
-                : 'bg-dark-700 text-gray-400 hover:text-white'
+                ? 'bg-accent-primary text-white' 
+                : 'bg-dark-700 text-light-400 hover:text-white'
             }`}
           >
             All ({resources.length})
@@ -331,10 +331,10 @@ function Resources() {
               <button
                 key={type}
                 onClick={() => setFilter(type)}
-                className={`px-4 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 ${
+                className={`px-4 py-2 rounded text-sm transition-colors flex items-center gap-2 ${
                   filter === type 
-                    ? 'bg-accent-purple text-white' 
-                    : 'bg-dark-700 text-gray-400 hover:text-white'
+                    ? 'bg-accent-primary text-white' 
+                    : 'bg-dark-700 text-light-400 hover:text-white'
                 }`}
               >
                 <Icon className="w-4 h-4" />
@@ -345,13 +345,13 @@ function Resources() {
         </div>
         
         {/* View Mode Toggle */}
-        <div className="flex gap-1 bg-dark-700 rounded-lg p-1">
+        <div className="flex gap-1 bg-dark-700 rounded p-1">
           <button
             onClick={() => setViewMode('grid')}
             className={`p-2 rounded transition-colors ${
               viewMode === 'grid' 
                 ? 'bg-dark-600 text-white' 
-                : 'text-gray-400 hover:text-white'
+                : 'text-light-400 hover:text-white'
             }`}
             title="Grid view"
           >
@@ -362,7 +362,7 @@ function Resources() {
             className={`p-2 rounded transition-colors ${
               viewMode === 'list' 
                 ? 'bg-dark-600 text-white' 
-                : 'text-gray-400 hover:text-white'
+                : 'text-light-400 hover:text-white'
             }`}
             title="List view (virtualized for large datasets)"
           >
@@ -386,7 +386,7 @@ function Resources() {
           ))}
           
           {filteredResources.length === 0 && (
-            <div className="col-span-full text-center py-12 text-gray-500">
+            <div className="col-span-full text-center py-12 text-light-500">
               <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p>No resources found</p>
               <p className="text-sm">Start building your learning library</p>
@@ -395,7 +395,7 @@ function Resources() {
         </div>
       ) : (
         // List View (virtualized for large datasets)
-        <div className="glass-card overflow-hidden">
+        <div className="bg-dark-800 border border-dark-600 rounded overflow-hidden">
           {shouldVirtualize && virtualListConfig ? (
             <VirtualList
               items={filteredResources}
@@ -427,7 +427,7 @@ function Resources() {
           )}
           
           {filteredResources.length === 0 && (
-            <div className="text-center py-12 text-gray-500">
+            <div className="text-center py-12 text-light-500">
               <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p>No resources found</p>
               <p className="text-sm">Start building your learning library</p>
@@ -445,7 +445,7 @@ function Resources() {
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Title</label>
+            <label className="block text-sm text-light-400 mb-2">Title</label>
             <input
               type="text"
               {...register('title')}
@@ -458,7 +458,7 @@ function Resources() {
           </div>
           
           <div>
-            <label className="block text-sm text-gray-400 mb-2">URL</label>
+            <label className="block text-sm text-light-400 mb-2">URL</label>
             <input
               type="url"
               {...register('url')}
@@ -471,7 +471,7 @@ function Resources() {
           </div>
           
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Type</label>
+            <label className="block text-sm text-light-400 mb-2">Type</label>
             <select {...register('type')} className="input-field">
               {Object.entries(TYPE_CONFIG).map(([value, { label }]) => (
                 <option key={value} value={value}>{label}</option>
@@ -480,7 +480,7 @@ function Resources() {
           </div>
           
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Link to Skill (optional)</label>
+            <label className="block text-sm text-light-400 mb-2">Link to Skill (optional)</label>
             <select {...register('skillId')} className="input-field">
               <option value="">None</option>
               {skills.map(skill => (
@@ -492,7 +492,7 @@ function Resources() {
           </div>
           
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Link to Project (optional)</label>
+            <label className="block text-sm text-light-400 mb-2">Link to Project (optional)</label>
             <select {...register('projectId')} className="input-field">
               <option value="">None</option>
               {projects.map(project => (
@@ -502,7 +502,7 @@ function Resources() {
           </div>
           
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Notes</label>
+            <label className="block text-sm text-light-400 mb-2">Notes</label>
             <textarea
               {...register('notes')}
               className={`input-field min-h-[80px] resize-none ${errors.notes ? 'border-red-500 focus:ring-red-500' : ''}`}

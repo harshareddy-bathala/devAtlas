@@ -114,7 +114,7 @@ function ActivityHeatmap({ data }) {
               <td 
                 key={index}
                 colSpan={colSpan}
-                className="text-xs text-gray-500 font-normal text-left px-[1.5px]"
+                className="text-xs text-light-500 font-normal text-left px-[1.5px]"
               >
                 {colSpan >= 3 ? label : ''}
               </td>
@@ -124,7 +124,7 @@ function ActivityHeatmap({ data }) {
         <tbody>
           {[0, 1, 2, 3, 4, 5, 6].map((dayIndex) => (
             <tr key={dayIndex}>
-              <td className="text-xs text-gray-500 pr-2 text-right" style={{ width: dayLabelWidth }}>
+              <td className="text-xs text-light-500 pr-2 text-right" style={{ width: dayLabelWidth }}>
                 {dayIndex === 1 ? 'Mon' : dayIndex === 3 ? 'Wed' : dayIndex === 5 ? 'Fri' : ''}
               </td>
               {weeks.map((week, weekIndex) => {

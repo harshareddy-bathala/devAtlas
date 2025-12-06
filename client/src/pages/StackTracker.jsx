@@ -22,17 +22,17 @@ const skillFormSchema = z.object({
 const STATUS_CONFIG = {
   want_to_learn: { 
     label: 'Want to Learn', 
-    color: 'bg-accent-orange/20 text-accent-orange border-accent-orange/30',
+    color: 'bg-[#F59E0B]/15 text-[#F59E0B] border border-[#F59E0B]/30',
     icon: Sparkles
   },
   learning: { 
     label: 'Learning', 
-    color: 'bg-accent-blue/20 text-accent-blue border-accent-blue/30',
+    color: 'bg-[#3B82F6]/15 text-[#3B82F6] border border-[#3B82F6]/30',
     icon: BookOpen
   },
   mastered: { 
     label: 'Mastered', 
-    color: 'bg-accent-green/20 text-accent-green border-accent-green/30',
+    color: 'bg-[#22C55E]/15 text-[#22C55E] border border-[#22C55E]/30',
     icon: Target
   }
 };
@@ -252,8 +252,8 @@ function StackTracker() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Stack Tracker</h1>
-          <p className="text-gray-400">Track your technology journey from interest to mastery</p>
+          <h1 className="text-3xl font-bold mb-2 text-white">Stack Tracker</h1>
+          <p className="text-light-500">Track your technology journey from interest to mastery</p>
         </div>
         <button onClick={() => openModal()} className="btn-primary flex items-center gap-2">
           <Plus className="w-4 h-4" />
@@ -268,13 +268,13 @@ function StackTracker() {
           const statusSkills = groupedSkills[status];
           
           return (
-            <div key={status} className="glass-card p-4">
-              <div className={`flex items-center gap-2 mb-4 pb-3 border-b border-dark-600`}>
-                <div className={`p-2 rounded-lg ${config.color.split(' ')[0]}`}>
+            <div key={status} className="bg-dark-800 border border-dark-600 rounded p-4">
+              <div className="flex items-center gap-2 mb-4 pb-3 border-b border-dark-600">
+                <div className={`p-2 rounded ${config.color.split(' ')[0]}`}>
                   <Icon className={`w-4 h-4 ${config.color.split(' ')[1]}`} />
                 </div>
-                <h2 className="font-semibold">{config.label}</h2>
-                <span className="ml-auto text-sm text-gray-500 bg-dark-600 px-2 py-0.5 rounded-full">
+                <h2 className="font-semibold text-white">{config.label}</h2>
+                <span className="ml-auto text-sm text-light-500 bg-dark-700 px-2 py-0.5 rounded">
                   {statusSkills.length}
                 </span>
               </div>
@@ -286,20 +286,20 @@ function StackTracker() {
                   return (
                   <div 
                     key={skill.id} 
-                    className="group bg-dark-700/50 rounded-lg p-3 hover:bg-dark-700 transition-colors"
+                    className="group bg-dark-700 border border-dark-600 rounded p-3 hover:border-dark-500 transition-colors"
                   >
                     <div className="flex items-center gap-3">
                       <span className="text-xl">{skill.icon}</span>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-medium truncate">{skill.name}</h3>
-                        <p className="text-xs text-gray-500 capitalize">{skill.category}</p>
+                        <h3 className="font-medium truncate text-white">{skill.name}</h3>
+                        <p className="text-xs text-light-500 capitalize">{skill.category}</p>
                       </div>
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
                         <button 
                           onClick={() => openModal(skill)}
                           className="p-1.5 hover:bg-dark-500 rounded"
                         >
-                          <Edit2 className="w-3.5 h-3.5 text-gray-400" />
+                          <Edit2 className="w-3.5 h-3.5 text-light-400" />
                         </button>
                         <button 
                           onClick={() => setDeleteConfirm({ open: true, skill })}
@@ -312,8 +312,8 @@ function StackTracker() {
                     
                     {/* Show linked projects for mastered skills */}
                     {skill.status === 'mastered' && linkedProjectNames.length > 0 && (
-                      <div className="mt-2 flex items-center gap-1.5 text-xs text-gray-500">
-                        <FolderCheck className="w-3 h-3 text-accent-green" />
+                      <div className="mt-2 flex items-center gap-1.5 text-xs text-light-500">
+                        <FolderCheck className="w-3 h-3 text-[#22C55E]" />
                         <span className="truncate">
                           {linkedProjectNames.length === 1 
                             ? linkedProjectNames[0] 
@@ -331,7 +331,7 @@ function StackTracker() {
                           className={`flex-1 text-xs py-1 rounded transition-colors ${
                             skill.status === s 
                               ? c.color 
-                              : 'bg-dark-600 text-gray-500 hover:text-gray-300'
+                              : 'bg-dark-600 text-light-500 hover:text-light-300'
                           }`}
                         >
                           {s === 'want_to_learn' ? 'Want' : s === 'learning' ? 'Learn' : 'Done'}
@@ -343,7 +343,7 @@ function StackTracker() {
                 })}
                 
                 {statusSkills.length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
+                  <div className="text-center py-8 text-light-500">
                     <p className="text-sm">No skills here yet</p>
                   </div>
                 )}
@@ -362,7 +362,7 @@ function StackTracker() {
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Name</label>
+            <label className="block text-sm text-light-400 mb-2">Name</label>
             <input
               type="text"
               {...register('name')}
@@ -375,7 +375,7 @@ function StackTracker() {
           </div>
           
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Category</label>
+            <label className="block text-sm text-light-400 mb-2">Category</label>
             <select {...register('category')} className="input-field">
               {CATEGORY_OPTIONS.map(opt => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -384,7 +384,7 @@ function StackTracker() {
           </div>
           
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Status</label>
+            <label className="block text-sm text-light-400 mb-2">Status</label>
             <select {...register('status')} className="input-field">
               {Object.entries(STATUS_CONFIG).map(([value, { label }]) => (
                 <option key={value} value={value}>{label}</option>
@@ -393,15 +393,15 @@ function StackTracker() {
           </div>
           
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Icon</label>
+            <label className="block text-sm text-light-400 mb-2">Icon</label>
             <div className="flex flex-wrap gap-2">
               {ICON_OPTIONS.map(icon => (
                 <button
                   key={icon}
                   type="button"
                   onClick={() => setValue('icon', icon)}
-                  className={`w-10 h-10 text-xl rounded-lg flex items-center justify-center transition-colors
-                    ${selectedIcon === icon ? 'bg-accent-purple/30 ring-2 ring-accent-purple' : 'bg-dark-600 hover:bg-dark-500'}`}
+                  className={`w-10 h-10 text-xl rounded flex items-center justify-center transition-colors
+                    ${selectedIcon === icon ? 'bg-accent-primary/20 ring-2 ring-accent-primary' : 'bg-dark-600 hover:bg-dark-500'}`}
                 >
                   {icon}
                 </button>

@@ -5,16 +5,18 @@ import toast from 'react-hot-toast';
 import ActivityHeatmap from '../components/ActivityHeatmap';
 import api from '../utils/api';
 
-// Skeleton Components
+// Skeleton Components - Minimal Design
 function StatCardSkeleton() {
   return (
-    <div className="glass-card p-5 animate-pulse">
-      <div className="flex items-start justify-between">
-        <div className="space-y-2">
-          <div className="h-3 w-20 bg-dark-600 rounded" />
-          <div className="h-8 w-12 bg-dark-600 rounded" />
+    <div className="bg-dark-800 border border-dark-600 border-l-[3px] border-l-accent-primary rounded p-5">
+      <div className="animate-pulse">
+        <div className="flex items-start justify-between">
+          <div className="space-y-2">
+            <div className="h-3 w-20 bg-dark-600 rounded" />
+            <div className="h-8 w-12 bg-dark-600 rounded" />
+          </div>
+          <div className="w-10 h-10 bg-dark-600 rounded" />
         </div>
-        <div className="w-11 h-11 bg-dark-600 rounded-xl" />
       </div>
     </div>
   );
@@ -22,22 +24,24 @@ function StatCardSkeleton() {
 
 function ChartSkeleton() {
   return (
-    <div className="glass-card p-6 animate-pulse">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-dark-600 rounded-xl" />
-        <div className="space-y-2">
-          <div className="h-5 w-32 bg-dark-600 rounded" />
-          <div className="h-3 w-48 bg-dark-600 rounded" />
+    <div className="bg-dark-800 border border-dark-600 rounded p-6">
+      <div className="animate-pulse">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 bg-dark-600 rounded" />
+          <div className="space-y-2">
+            <div className="h-5 w-32 bg-dark-600 rounded" />
+            <div className="h-3 w-48 bg-dark-600 rounded" />
+          </div>
         </div>
-      </div>
-      <div className="h-64 bg-dark-700/50 rounded-lg flex items-end justify-around p-4">
-        {[...Array(12)].map((_, i) => (
-          <div 
-            key={i} 
-            className="w-6 bg-dark-600 rounded-t" 
-            style={{ height: `${Math.random() * 60 + 20}%` }}
-          />
-        ))}
+        <div className="h-64 bg-dark-700 rounded flex items-end justify-around p-4">
+          {[...Array(12)].map((_, i) => (
+            <div 
+              key={i} 
+              className="w-6 bg-dark-600 rounded-t" 
+              style={{ height: `${Math.random() * 60 + 20}%` }}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -45,24 +49,26 @@ function ChartSkeleton() {
 
 function QuickStatSkeleton() {
   return (
-    <div className="glass-card p-5 animate-pulse">
-      <div className="h-3 w-24 bg-dark-600 rounded mb-3" />
-      <div className="h-7 w-10 bg-dark-600 rounded" />
+    <div className="bg-dark-800 border border-dark-600 rounded p-5">
+      <div className="animate-pulse">
+        <div className="h-3 w-24 bg-dark-600 rounded mb-3" />
+        <div className="h-7 w-10 bg-dark-600 rounded" />
+      </div>
     </div>
   );
 }
 
-// Stat Card Component - memoized for performance
-const StatCard = memo(function StatCard({ label, value, icon: Icon, bgColor }) {
+// Stat Card Component - memoized with new minimal design
+const StatCard = memo(function StatCard({ label, value, icon: Icon, accentColor }) {
   return (
-    <div className="glass-card p-5">
+    <div className="bg-dark-800 border border-dark-600 border-l-[3px] rounded p-5" style={{ borderLeftColor: accentColor }}>
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-gray-400 text-sm font-medium mb-1">{label}</p>
+          <p className="text-light-500 text-sm font-medium mb-1">{label}</p>
           <p className="text-3xl font-bold text-white">{value}</p>
         </div>
-        <div className={`p-3 rounded-xl ${bgColor}`}>
-          <Icon className="w-5 h-5 text-white" />
+        <div className="p-2.5 rounded" style={{ backgroundColor: `${accentColor}15` }}>
+          <Icon className="w-5 h-5" style={{ color: accentColor }} />
         </div>
       </div>
     </div>
@@ -137,25 +143,25 @@ function Dashboard() {
       label: 'Skills Mastered', 
       value: stats?.skills?.mastered || 0, 
       icon: Target, 
-      bgColor: 'bg-emerald-500'
+      accentColor: '#22C55E'
     },
     { 
       label: 'Currently Learning', 
       value: stats?.skills?.learning || 0, 
       icon: BookOpen, 
-      bgColor: 'bg-blue-500'
+      accentColor: '#3B82F6'
     },
     { 
       label: 'Active Projects', 
       value: stats?.projects?.active || 0, 
       icon: FolderKanban, 
-      bgColor: 'bg-violet-500'
+      accentColor: '#8B5CF6'
     },
     { 
       label: 'Active Days (30d)', 
       value: stats?.activeDaysLast30 || 0, 
       icon: Activity, 
-      bgColor: 'bg-amber-500'
+      accentColor: '#F59E0B'
     },
   ], [stats]);
 
@@ -194,15 +200,17 @@ function Dashboard() {
         <ChartSkeleton />
 
         {/* Heatmap skeleton */}
-        <div className="glass-card p-6 animate-pulse">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-dark-600 rounded-xl" />
-            <div className="space-y-2">
-              <div className="h-5 w-24 bg-dark-600 rounded" />
-              <div className="h-3 w-40 bg-dark-600 rounded" />
+        <div className="bg-dark-800 border border-dark-600 rounded p-6">
+          <div className="animate-pulse">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-dark-600 rounded" />
+              <div className="space-y-2">
+                <div className="h-5 w-24 bg-dark-600 rounded" />
+                <div className="h-3 w-40 bg-dark-600 rounded" />
+              </div>
             </div>
+            <div className="h-32 bg-dark-700 rounded" />
           </div>
-          <div className="h-32 bg-dark-700/50 rounded-lg" />
         </div>
 
         {/* Quick stats skeleton */}
@@ -218,8 +226,8 @@ function Dashboard() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
-          <p className="text-gray-400">Your development journey at a glance</p>
+          <h1 className="text-3xl font-bold mb-2 text-white">Dashboard</h1>
+          <p className="text-light-500">Your development journey at a glance</p>
         </div>
         <button
           onClick={() => loadDashboardData(true)}
@@ -239,14 +247,14 @@ function Dashboard() {
       </div>
 
       {/* Learning Progress Chart */}
-      <div className="glass-card p-6">
+      <div className="bg-dark-800 border border-dark-600 rounded p-6">
         <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 rounded-lg bg-violet-500/10">
-            <TrendingUp className="w-5 h-5 text-violet-400" />
+          <div className="p-2 rounded bg-accent-primary/10">
+            <TrendingUp className="w-5 h-5 text-accent-primary" />
           </div>
           <div>
-            <h2 className="text-xl font-semibold">Learning Progress</h2>
-            <p className="text-sm text-gray-400">Activity over the last 12 weeks</p>
+            <h2 className="text-xl font-semibold text-white">Learning Progress</h2>
+            <p className="text-sm text-light-500">Activity over the last 12 weeks</p>
           </div>
         </div>
         
@@ -256,30 +264,30 @@ function Dashboard() {
               <AreaChart data={chartData}>
                 <defs>
                   <linearGradient id="colorActivities" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0}/>
                   </linearGradient>
                   <linearGradient id="colorSkills" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#06B6D4" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#06B6D4" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#22242e" />
-                <XAxis dataKey="week" stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#27272A" />
+                <XAxis dataKey="week" stroke="#71717A" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis stroke="#71717A" fontSize={12} tickLine={false} axisLine={false} />
                 <Tooltip 
                   contentStyle={{ 
-                    backgroundColor: '#14151c', 
-                    border: '1px solid #22242e',
-                    borderRadius: '12px',
+                    backgroundColor: '#18181B', 
+                    border: '1px solid #27272A',
+                    borderRadius: '6px',
                     boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.3)'
                   }}
-                  labelStyle={{ color: '#9ca3af' }}
+                  labelStyle={{ color: '#A1A1AA' }}
                 />
                 <Area 
                   type="monotone" 
                   dataKey="activities" 
-                  stroke="#8b5cf6" 
+                  stroke="#8B5CF6" 
                   strokeWidth={2}
                   fillOpacity={1} 
                   fill="url(#colorActivities)" 
@@ -288,7 +296,7 @@ function Dashboard() {
                 <Area 
                   type="monotone" 
                   dataKey="skills" 
-                  stroke="#06b6d4" 
+                  stroke="#06B6D4" 
                   strokeWidth={2}
                   fillOpacity={1} 
                   fill="url(#colorSkills)" 
@@ -297,7 +305,7 @@ function Dashboard() {
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-full flex items-center justify-center text-gray-500">
+            <div className="h-full flex items-center justify-center text-light-500">
               <div className="text-center">
                 <Activity className="w-12 h-12 mx-auto mb-3 opacity-50" />
                 <p>No activity data yet</p>
@@ -309,23 +317,23 @@ function Dashboard() {
       </div>
 
       {/* Activity Heatmap */}
-      <div className="glass-card p-6">
+      <div className="bg-dark-800 border border-dark-600 rounded p-6">
         <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 rounded-lg bg-emerald-500/10">
-            <Zap className="w-5 h-5 text-emerald-400" />
+          <div className="p-2 rounded bg-accent-green/10">
+            <Zap className="w-5 h-5 text-accent-green" />
           </div>
           <div>
-            <h2 className="text-xl font-semibold">Activity Log</h2>
-            <p className="text-sm text-gray-400">Your consistency over the past year</p>
+            <h2 className="text-xl font-semibold text-white">Activity Log</h2>
+            <p className="text-sm text-light-500">Your consistency over the past year</p>
           </div>
         </div>
         
         <ActivityHeatmap data={heatmapData} />
         
-        <div className="flex items-center justify-end gap-2 mt-4 text-xs text-gray-500">
+        <div className="flex items-center justify-end gap-2 mt-4 text-xs text-light-500">
           <span>Less</span>
           <div className="flex gap-1">
-            <div className="w-[10px] h-[10px] rounded-sm bg-[#2d333b]" />
+            <div className="w-[10px] h-[10px] rounded-sm bg-dark-600" />
             <div className="w-[10px] h-[10px] rounded-sm bg-[#0e4429]" />
             <div className="w-[10px] h-[10px] rounded-sm bg-[#006d32]" />
             <div className="w-[10px] h-[10px] rounded-sm bg-[#26a641]" />
@@ -338,9 +346,9 @@ function Dashboard() {
       {/* Quick Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {quickStats.map((stat) => (
-          <div key={stat.label} className="glass-card p-5">
-            <h3 className="text-gray-400 text-sm mb-2">{stat.label}</h3>
-            <p className="text-2xl font-bold">{stat.value}</p>
+          <div key={stat.label} className="bg-dark-800 border border-dark-600 rounded p-5">
+            <h3 className="text-light-500 text-sm mb-2">{stat.label}</h3>
+            <p className="text-2xl font-bold text-white">{stat.value}</p>
           </div>
         ))}
       </div>

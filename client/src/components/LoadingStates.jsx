@@ -19,8 +19,8 @@ export function PageLoader({ message = 'Loading...' }) {
   return (
     <div className="flex items-center justify-center h-full min-h-[400px]">
       <div className="text-center">
-        <Spinner size="xl" className="mx-auto mb-4 text-primary-500" />
-        <p className="text-gray-400">{message}</p>
+        <Spinner size="xl" className="mx-auto mb-4 text-accent-primary" />
+        <p className="text-light-500">{message}</p>
       </div>
     </div>
   );
@@ -62,13 +62,13 @@ export function Skeleton({ className = '' }) {
 // Card skeleton
 export function CardSkeleton({ lines = 3 }) {
   return (
-    <div className="glass-card p-5 space-y-4">
+    <div className="bg-dark-800 border border-dark-600 rounded p-5 space-y-4">
       <div className="flex items-start justify-between">
         <div className="space-y-2 flex-1">
           <Skeleton className="h-5 w-3/4" />
           <Skeleton className="h-3 w-1/2" />
         </div>
-        <Skeleton className="w-10 h-10 rounded-xl flex-shrink-0" />
+        <Skeleton className="w-10 h-10 rounded flex-shrink-0" />
       </div>
       {[...Array(lines)].map((_, i) => (
         <Skeleton key={i} className="h-3" style={{ width: `${100 - i * 15}%` }} />
@@ -80,13 +80,13 @@ export function CardSkeleton({ lines = 3 }) {
 // Stat card skeleton
 export function StatCardSkeleton() {
   return (
-    <div className="glass-card p-5">
+    <div className="bg-dark-800 border border-dark-600 rounded p-5">
       <div className="flex items-start justify-between">
         <div className="space-y-2">
           <Skeleton className="h-3 w-24" />
           <Skeleton className="h-8 w-16" />
         </div>
-        <Skeleton className="w-11 h-11 rounded-xl" />
+        <Skeleton className="w-11 h-11 rounded" />
       </div>
     </div>
   );
@@ -114,14 +114,14 @@ export function ListSkeleton({ items = 5, className = '' }) {
       {[...Array(items)].map((_, i) => (
         <div
           key={i}
-          className="flex items-center gap-3 p-4 bg-dark-700/50 rounded-lg"
+          className="flex items-center gap-3 p-4 bg-dark-700 border border-dark-600 rounded"
         >
-          <Skeleton className="w-10 h-10 rounded-lg" />
+          <Skeleton className="w-10 h-10 rounded" />
           <div className="flex-1 space-y-2">
             <Skeleton className="h-4 w-1/3" />
             <Skeleton className="h-3 w-2/3" />
           </div>
-          <Skeleton className="w-16 h-6 rounded-full" />
+          <Skeleton className="w-16 h-6 rounded" />
         </div>
       ))}
     </div>
@@ -131,16 +131,16 @@ export function ListSkeleton({ items = 5, className = '' }) {
 // Chart skeleton
 export function ChartSkeleton({ height = 256 }) {
   return (
-    <div className="glass-card p-6">
+    <div className="bg-dark-800 border border-dark-600 rounded p-6">
       <div className="flex items-center gap-3 mb-6">
-        <Skeleton className="w-10 h-10 rounded-xl" />
+        <Skeleton className="w-10 h-10 rounded" />
         <div className="space-y-2">
           <Skeleton className="h-5 w-32" />
           <Skeleton className="h-3 w-48" />
         </div>
       </div>
       <div 
-        className="bg-dark-700/50 rounded-lg flex items-end justify-around p-4"
+        className="bg-dark-700 rounded flex items-end justify-around p-4"
         style={{ height }}
       >
         {[...Array(12)].map((_, i) => (
@@ -174,10 +174,10 @@ export function FormSkeleton({ fields = 3 }) {
       {[...Array(fields)].map((_, i) => (
         <div key={i} className="space-y-2">
           <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-10 w-full rounded-lg" />
+          <Skeleton className="h-10 w-full rounded" />
         </div>
       ))}
-      <Skeleton className="h-10 w-32 rounded-lg mt-6" />
+      <Skeleton className="h-10 w-32 rounded mt-6" />
     </div>
   );
 }
@@ -196,7 +196,7 @@ export function GridSkeleton({ items = 6, columns = 3 }) {
 // Inline loading indicator
 export function InlineLoader({ text = 'Loading' }) {
   return (
-    <span className="inline-flex items-center gap-2 text-gray-400">
+    <span className="inline-flex items-center gap-2 text-light-500">
       <Spinner size="sm" />
       <span>{text}</span>
     </span>
@@ -206,10 +206,10 @@ export function InlineLoader({ text = 'Loading' }) {
 // Overlay loader (for modals, cards that are updating)
 export function OverlayLoader({ message }) {
   return (
-    <div className="absolute inset-0 bg-dark-900/80 backdrop-blur-sm flex items-center justify-center rounded-xl z-10">
+    <div className="absolute inset-0 bg-dark-900/80 flex items-center justify-center rounded z-10">
       <div className="text-center">
-        <Spinner size="lg" className="mx-auto mb-2 text-primary-500" />
-        {message && <p className="text-sm text-gray-400">{message}</p>}
+        <Spinner size="lg" className="mx-auto mb-2 text-accent-primary" />
+        {message && <p className="text-sm text-light-500">{message}</p>}
       </div>
     </div>
   );

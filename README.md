@@ -13,7 +13,7 @@ Track skills, manage projects, save resources, and visualize your development jo
 [![CI/CD](https://github.com/harshareddy-bathala/devAtlas/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/harshareddy-bathala/devAtlas/actions/workflows/ci-cd.yml)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-[Features](#features) · [Tech Stack](#tech-stack) · [Quick Start](#quick-start) · [Deployment](#deployment) · [API Reference](#api-reference)
+[Features](#features) · [Design System](#design-system) · [Tech Stack](#tech-stack) · [Quick Start](#quick-start) · [Deployment](#deployment) · [API Reference](#api-reference)
 
 </div>
 
@@ -32,11 +32,66 @@ Track skills, manage projects, save resources, and visualize your development jo
 
 ---
 
+## Design System
+
+DevOrbit features a **minimal, flat dark theme** inspired by modern developer tools like Render.com.
+
+### Core Principles
+
+- **Dark-first:** Near-black background (#0A0A0B) for reduced eye strain
+- **Minimal UI:** Flat design with subtle borders, no glass-morphism or heavy gradients
+- **Sharp edges:** Consistent 4px border radius for a clean, professional look
+- **Single accent:** Purple (#8B5CF6) as the primary accent color
+
+### Color Palette
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| `bg-primary` | `#0A0A0B` | Main background |
+| `dark-800` | `#1A1A1D` | Card backgrounds |
+| `dark-700` | `#232326` | Elevated surfaces |
+| `dark-600` | `#2D2D31` | Borders |
+| `light-500` | `#A1A1AA` | Secondary text |
+| `accent-primary` | `#8B5CF6` | Primary accent (purple) |
+| Status Green | `#22C55E` | Success, completed |
+| Status Blue | `#3B82F6` | Info, in progress |
+| Status Orange | `#F59E0B` | Warning, learning |
+
+### Component Patterns
+
+```css
+/* Standard card */
+.card {
+  @apply bg-dark-800 border border-dark-600 rounded;
+}
+
+/* Status badge */
+.badge-success {
+  @apply bg-[#22C55E]/15 text-[#22C55E];
+}
+
+/* Primary button */
+.btn-primary {
+  @apply bg-accent-primary hover:bg-accent-primary/90 text-white;
+}
+```
+
+### Landing Page
+
+The app includes a modern landing page (`/`) featuring:
+- Hero section with call-to-action
+- Feature showcase with icons
+- Testimonials section
+- Responsive design for all devices
+
+---
+
 ## Tech Stack
 
 ### Frontend
 - **Framework:** React 18 with Vite
-- **Styling:** Tailwind CSS
+- **Styling:** Tailwind CSS with custom design tokens
+- **Design System:** Minimal dark theme (design-tokens.css, component-library.css)
 - **State Management:** React Context API
 - **Forms:** React Hook Form + Zod validation
 - **Charts:** Recharts
@@ -162,12 +217,22 @@ devAtlas/
 ├── client/                     # React frontend application
 │   ├── src/
 │   │   ├── components/         # Reusable UI components
+│   │   │   ├── common/         # Form fields, Modal, KanbanBoard
+│   │   │   └── ...             # Feature-specific components
 │   │   ├── contexts/           # React Context providers
 │   │   ├── hooks/              # Custom React hooks
 │   │   ├── lib/                # Firebase configuration
 │   │   ├── pages/              # Page components
+│   │   │   ├── Landing.tsx     # Public landing page
+│   │   │   ├── Dashboard.jsx   # Main dashboard
+│   │   │   ├── StackTracker.jsx # Skill tracking
+│   │   │   ├── Projects.jsx    # Project management
+│   │   │   ├── Resources.jsx   # Resource library
+│   │   │   └── Settings.jsx    # User settings
 │   │   ├── types/              # TypeScript type definitions
 │   │   └── utils/              # API client and utilities
+│   ├── design-tokens.css       # Design system CSS variables
+│   ├── component-library.css   # Reusable component styles
 │   ├── package.json
 │   └── vite.config.js
 │
@@ -178,10 +243,14 @@ devAtlas/
 │   ├── middleware.js           # Express middleware
 │   ├── validation.js           # Zod schemas
 │   ├── errors.js               # Custom error classes
+│   ├── db/                     # Database modules
 │   ├── Dockerfile              # Container configuration
 │   └── package.json
 │
+├── tests/                      # E2E tests with Playwright
+│   └── e2e/
 ├── DEPLOYMENT.md               # Deployment guide
+├── SECURITY.md                 # Security documentation
 └── package.json                # Root package configuration
 ```
 
@@ -239,14 +308,6 @@ devAtlas/
 | `GET` | `/api/stats/progress` | Get progress data |
 | `GET` | `/api/activities` | List activities |
 | `GET` | `/api/activities/heatmap` | Get activity heatmap data |
-
-### Data Management
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/export` | Export all user data |
-| `POST` | `/api/import` | Import user data |
-| `DELETE` | `/api/data` | Clear all user data |
 
 ---
 

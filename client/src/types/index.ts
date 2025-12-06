@@ -322,12 +322,3 @@ export interface PaginationParams {
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }
-
-// Keyboard shortcuts
-export interface KeyboardShortcut {
-  key: string;
-  modifiers?: ('ctrl' | 'alt' | 'shift' | 'meta')[];
-  description: string;
-  action: () => void;
-  scope?: 'global' | 'page';
-}

@@ -16,27 +16,27 @@ export function ConfirmDialog({
   const variantConfig = {
     danger: {
       icon: AlertTriangle,
-      iconBg: 'bg-error/10',
-      iconColor: 'text-error',
-      buttonClass: 'bg-error hover:bg-red-600 text-white'
+      iconBg: 'bg-red-500/10',
+      iconColor: 'text-red-400',
+      buttonClass: 'bg-red-500 hover:bg-red-600 text-white'
     },
     warning: {
       icon: AlertTriangle,
-      iconBg: 'bg-warning/10',
-      iconColor: 'text-warning',
-      buttonClass: 'bg-warning hover:bg-amber-600 text-white'
+      iconBg: 'bg-[#F59E0B]/10',
+      iconColor: 'text-[#F59E0B]',
+      buttonClass: 'bg-[#F59E0B] hover:bg-amber-600 text-white'
     },
     primary: {
       icon: Info,
-      iconBg: 'bg-primary-500/10',
-      iconColor: 'text-primary-400',
-      buttonClass: 'bg-primary-500 hover:bg-primary-600 text-white'
+      iconBg: 'bg-accent-primary/10',
+      iconColor: 'text-accent-primary',
+      buttonClass: 'bg-accent-primary hover:bg-accent-primary/90 text-white'
     },
     success: {
       icon: CheckCircle,
-      iconBg: 'bg-success/10',
-      iconColor: 'text-success',
-      buttonClass: 'bg-success hover:bg-emerald-600 text-white'
+      iconBg: 'bg-[#22C55E]/10',
+      iconColor: 'text-[#22C55E]',
+      buttonClass: 'bg-[#22C55E] hover:bg-emerald-600 text-white'
     }
   };
 
@@ -45,28 +45,28 @@ export function ConfirmDialog({
 
   return (
     <div 
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      className="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
       onClick={onClose}
     >
       <div 
-        className="bg-dark-800 border border-dark-600 rounded-xl w-full max-w-md m-4"
+        className="bg-dark-850 border border-dark-600 rounded w-full max-w-md m-4"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-6">
           <div className="flex items-start gap-4">
-            <div className={`p-2.5 rounded-xl ${config.iconBg}`}>
+            <div className={`p-2.5 rounded ${config.iconBg}`}>
               <Icon className={`w-5 h-5 ${config.iconColor}`} />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-semibold mb-2">{title}</h3>
-              <p className="text-gray-400 text-sm">{message}</p>
+              <h3 className="text-lg font-semibold mb-2 text-white">{title}</h3>
+              <p className="text-light-500 text-sm">{message}</p>
             </div>
             <button 
               onClick={onClose} 
-              className="p-1.5 hover:bg-dark-600 rounded-lg"
+              className="p-1.5 hover:bg-dark-600 rounded"
               disabled={loading}
             >
-              <X className="w-5 h-5" />
+              <X className="w-5 h-5 text-light-400" />
             </button>
           </div>
         </div>
@@ -85,7 +85,7 @@ export function ConfirmDialog({
               if (!loading) onClose();
             }}
             disabled={loading}
-            className={`flex-1 px-4 py-2.5 rounded-lg font-medium transition-colors disabled:opacity-50 ${config.buttonClass}`}
+            className={`flex-1 px-4 py-2.5 rounded font-medium transition-colors disabled:opacity-50 ${config.buttonClass}`}
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">

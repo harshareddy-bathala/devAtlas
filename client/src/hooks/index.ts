@@ -5,7 +5,7 @@ export { usePagination } from './usePagination';
 export type { 
   PaginationMeta, 
   PaginatedResponse, 
-  UsePaginationOptions as UsePaginationWithFetchOptions, 
+  UsePaginationOptions, 
   UsePaginationResult 
 } from './usePagination';
 
@@ -63,92 +63,6 @@ export function useLocalStorage<T>(
   );
 
   return [storedValue, setValue];
-}
-
-// Pagination hook with cursor and offset support
-export interface UsePaginationOptions {
-  initialPage?: number;
-  initialLimit?: number;
-  totalItems?: number;
-}
-
-export interface UsePaginationReturn {
-  page: number;
-  limit: number;
-  offset: number;
-  totalPages: number;
-  hasNextPage: boolean;
-  hasPrevPage: boolean;
-  goToPage: (page: number) => void;
-  nextPage: () => void;
-  prevPage: () => void;
-  setLimit: (limit: number) => void;
-  setTotalItems: (total: number) => void;
-}
-
-export function usePagination({
-  initialPage = 1,
-  initialLimit = 10,
-  totalItems = 0,
-}: UsePaginationOptions = {}): UsePaginationReturn {
-  const [page, setPage] = useState(initialPage);
-  const [limit, setLimit] = useState(initialLimit);
-  const [total, setTotal] = useState(totalItems);
-
-  const totalPages = Math.ceil(total / limit) || 1;
-  const hasNextPage = page < totalPages;
-  const hasPrevPage = page > 1;
-  const offset = (page - 1) * limit;
-
-  const goToPage = useCallback(
-    (newPage: number) => {
-      const validPage = Math.min(Math.max(1, newPage), totalPages);
-      setPage(validPage);
-    },
-    [totalPages]
-  );
-
-  const nextPage = useCallback(() => {
-    if (hasNextPage) {
-      setPage(p => p + 1);
-    }
-  }, [hasNextPage]);
-
-  const prevPage = useCallback(() => {
-    if (hasPrevPage) {
-      setPage(p => p - 1);
-    }
-  }, [hasPrevPage]);
-
-  const updateLimit = useCallback((newLimit: number) => {
-    setLimit(newLimit);
-    setPage(1); // Reset to first page when limit changes
-  }, []);
-
-  const setTotalItems = useCallback((newTotal: number) => {
-    setTotal(newTotal);
-  }, []);
-
-  // Reset page if it exceeds total pages after data changes
-  useEffect(() => {
-    if (page > totalPages && totalPages > 0) {
-      setPage(totalPages);
-    }
-  }, [page, totalPages]);
-
-  return {
-    page,
-    limit,
-    offset,
-    totalPages,
-    hasNextPage,
-    hasPrevPage,
-    goToPage,
-    nextPage,
-    prevPage,
-    setLimit: updateLimit,
-    setTotalItems,
-  };
 }
 
 // Hook for handling async operations with loading/error states

@@ -122,15 +122,15 @@ export function getFieldError(touched, error) {
 }
 
 // Sanitize input (basic XSS prevention)
+// Note: Don't use this on URLs - they need slashes intact
 export function sanitizeInput(input) {
   if (typeof input !== 'string') return input;
   
+  // Only escape < and > which are the main XSS vectors
+  // Don't escape quotes or slashes as they break URLs and normal text
   return input
     .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    .replace(/\//g, '&#x2F;');
+    .replace(/>/g, '&gt;');
 }
 
 // Trim all string values in an object

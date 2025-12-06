@@ -11,9 +11,61 @@
       ]
     },
     {
+      "collectionGroup": "activitySummary",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "skills",
       "queryScope": "COLLECTION",
       "fields": [
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "skills",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "skills",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "category",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "skills",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "category",
+          "order": "ASCENDING"
+        },
         {
           "fieldPath": "createdAt",
           "order": "DESCENDING"
@@ -31,9 +83,65 @@
       ]
     },
     {
+      "collectionGroup": "projects",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "resources",
       "queryScope": "COLLECTION",
       "fields": [
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "resources",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "type",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "resources",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "skillId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "resources",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
         {
           "fieldPath": "createdAt",
           "order": "DESCENDING"

@@ -7,7 +7,29 @@ const arrayOrObjectToArray = z.union([
   z.record(z.string()).transform((obj) => Object.values(obj))
 ]).optional().default([]);
 
-// Skill validation schema
+// Pagination validation schema
+const paginationSchema = z.object({
+  page: z.string()
+    .optional()
+    .transform(val => val ? parseInt(val, 10) : 1)
+    .refine(val => !isNaN(val) && val >= 1 && val <= 10000, {
+      message: 'Page must be a positive integer between 1 and 10000'
+    }),
+  limit: z.string()
+    .optional()
+    .transform(val => val ? parseInt(val, 10) : 20)
+    .refine(val => !isNaN(val) && val >= 1 && val <= 100, {
+      message: 'Limit must be between 1 and 100'
+    }),
+  sortBy: z.enum(['createdAt', 'updatedAt', 'name', 'status', 'title'])
+    .optional()
+    .default('createdAt'),
+  sortOrder: z.enum(['asc', 'desc'])
+    .optional()
+    .default('desc')
+}).strict(); // Reject unknown query params
+
+// Skill validation schema - strict mode (no passthrough)
 const skillSchema = z.object({
   name: z.string()
     .min(1, 'Name is required')
@@ -19,9 +41,9 @@ const skillSchema = z.object({
     .default('want_to_learn'),
   icon: z.string().max(50).optional().default('📚'),
   linkedProjects: arrayOrObjectToArray
-}).passthrough(); // Allow extra fields like id, createdAt, updatedAt
+}).strict(); // Don't allow unexpected fields
 
-// Project validation schema
+// Project validation schema - strict mode
 const projectSchema = z.object({
   name: z.string()
     .min(1, 'Name is required')
@@ -46,7 +68,7 @@ const projectSchema = z.object({
     .optional()
     .default(''),
   linkedSkills: arrayOrObjectToArray
-}).passthrough(); // Allow extra fields like id, createdAt, updatedAt
+}).strict(); // Don't allow unexpected fields
 
 // Resource validation schema
 const resourceSchema = z.object({
@@ -114,61 +136,6 @@ const profileSchema = z.object({
     .default('')
 });
 
-// Import data validation schema - for validating imported data structure
-const importSkillSchema = z.object({
-  name: z.string().min(1).max(100).trim(),
-  category: z.enum(['language', 'framework', 'library', 'tool', 'database', 'runtime', 'other']).optional().default('language'),
-  status: z.enum(['want_to_learn', 'learning', 'mastered']).optional().default('want_to_learn'),
-  icon: z.string().max(50).optional().default('📚'),
-  linkedProjects: z.array(z.string()).optional().default([])
-}).strip(); // Strip unknown fields for import
-
-const importProjectSchema = z.object({
-  name: z.string().min(1).max(200).trim(),
-  description: z.string().max(2000).optional().default(''),
-  status: z.enum(['idea', 'active', 'completed']).optional().default('idea'),
-  githubUrl: z.string().url().optional().or(z.literal('')).default(''),
-  github_url: z.string().url().optional().or(z.literal('')).default(''), // Support both formats
-  demoUrl: z.string().url().optional().or(z.literal('')).default(''),
-  demo_url: z.string().url().optional().or(z.literal('')).default(''), // Support both formats
-  techStack: z.string().max(500).optional().default(''),
-  tech_stack: z.string().max(500).optional().default(''), // Support both formats
-  linkedSkills: z.array(z.string()).optional().default([])
-}).strip();
-
-const importResourceSchema = z.object({
-  title: z.string().min(1).max(300).trim(),
-  url: z.string().url().max(2000),
-  type: z.enum(['documentation', 'video', 'course', 'article', 'tutorial', 'other']).optional().default('article'),
-  skillId: z.string().nullable().optional(),
-  projectId: z.string().nullable().optional(),
-  notes: z.string().max(5000).optional().default('')
-}).strip();
-
-const importActivitySchema = z.object({
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  count: z.number().int().min(0).max(1000).optional().default(1),
-  types: z.record(z.number().int().min(0)).optional().default({}),
-  lastActivity: z.string().max(1000).optional().default('')
-}).strip();
-
-// Full import data schema
-const importDataSchema = z.object({
-  skills: z.array(importSkillSchema).optional().default([]),
-  projects: z.array(importProjectSchema).optional().default([]),
-  resources: z.array(importResourceSchema).optional().default([]),
-  activities: z.array(importActivitySchema).optional().default([]),
-  // Profile is optional for backwards compatibility
-  profile: z.object({
-    displayName: z.string().max(100).optional(),
-    email: z.string().email().optional(),
-    photoURL: z.string().url().optional().nullable(),
-    createdAt: z.string().optional()
-  }).optional(),
-  exportedAt: z.string().optional(),
-  version: z.string().optional()
-}).strict(); // Strict mode - reject unknown fields at root level
-
 module.exports = {
   skillSchema,
   projectSchema,
@@ -176,10 +143,5 @@ module.exports = {
   activitySchema,
   idParamSchema,
   profileSchema,
-  // Import schemas
-  importDataSchema,
-  importSkillSchema,
-  importProjectSchema,
-  importResourceSchema,
-  importActivitySchema
+  paginationSchema
 };

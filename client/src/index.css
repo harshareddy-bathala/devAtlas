@@ -1,49 +1,20 @@
+/* Import Design System */
+@import './styles/design-tokens.css';
+@import './styles/component-library.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* CSS Variables for theming */
 :root {
-  /* Light mode colors */
-  --color-bg: #f8fafc;
-  --color-surface: #ffffff;
-  --color-border: #e2e8f0;
-  --color-text: #1e293b;
-  --color-text-muted: #64748b;
-  
-  /* Primary colors */
-  --color-primary: #6366f1;
-  --color-primary-hover: #4f46e5;
-  
   /* Toast colors */
-  --toast-bg: #ffffff;
-  --toast-color: #1e293b;
-  --toast-border: #e2e8f0;
-}
-
-.dark {
-  /* Dark mode colors */
-  --color-bg: #0a0a0f;
-  --color-surface: #14151c;
-  --color-border: #22242e;
-  --color-text: #ffffff;
-  --color-text-muted: #9ca3af;
-  
-  /* Primary colors */
-  --color-primary: #6366f1;
-  --color-primary-hover: #818cf8;
-  
-  /* Toast colors */
-  --toast-bg: #14151c;
-  --toast-color: #ffffff;
-  --toast-border: #22242e;
+  --toast-bg: #18181B;
+  --toast-color: #FAFAFA;
+  --toast-border: #27272A;
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
-
   html {
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
@@ -51,14 +22,14 @@
   }
 
   body {
-    @apply bg-light-100 text-gray-900 dark:bg-dark-900 dark:text-white antialiased;
+    @apply bg-dark-900 text-white antialiased;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 
   /* Typography */
   h1, h2, h3, h4, h5, h6 {
-    @apply font-semibold tracking-tight;
+    @apply font-semibold tracking-tight text-white;
   }
 
   h1 { @apply text-3xl md:text-4xl; }
@@ -66,7 +37,7 @@
   h3 { @apply text-xl md:text-2xl; }
   h4 { @apply text-lg md:text-xl; }
 
-  /* Custom scrollbar */
+  /* Custom scrollbar - minimal */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -77,175 +48,22 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-gray-300 dark:bg-dark-500 rounded-full;
+    @apply bg-dark-600 rounded-full;
     transition: background-color 0.2s ease;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-gray-400 dark:bg-dark-400;
+    @apply bg-dark-500;
   }
 
-  /* Focus styles */
+  /* Focus styles - accent color */
   :focus-visible {
-    @apply outline-none ring-2 ring-primary-500/50 ring-offset-2 ring-offset-white dark:ring-offset-dark-900;
+    @apply outline-none ring-2 ring-accent-primary/50 ring-offset-2 ring-offset-dark-900;
   }
 
   /* Selection */
   ::selection {
-    @apply bg-primary-500/20 text-primary-600 dark:text-primary-400;
-  }
-}
-
-@layer components {
-  /* Glass morphism card - Simplified */
-  .glass-card {
-    @apply bg-white dark:bg-dark-800 rounded-xl 
-           border border-gray-200 dark:border-dark-600
-           transition-colors duration-200;
-  }
-
-  /* Solid card */
-  .card {
-    @apply bg-white dark:bg-dark-800 rounded-xl border border-gray-200 
-           dark:border-dark-600;
-  }
-
-  /* Input field - Enhanced */
-  .input-field {
-    @apply w-full px-4 py-2.5 bg-gray-50 dark:bg-dark-700 
-           border border-gray-200 dark:border-dark-500 rounded-lg 
-           text-gray-900 dark:text-white 
-           placeholder-gray-400 dark:placeholder-gray-500 
-           focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 
-           transition-all duration-200;
-  }
-
-  .input-field-error {
-    @apply input-field border-error focus:ring-error/30 focus:border-error;
-  }
-
-  /* Primary button - Simple */
-  .btn-primary {
-    @apply px-5 py-2.5 bg-primary-500 hover:bg-primary-600
-           text-white font-medium rounded-lg 
-           transition-colors duration-200 
-           disabled:opacity-50 disabled:cursor-not-allowed;
-  }
-
-  /* Secondary button */
-  .btn-secondary {
-    @apply px-5 py-2.5 bg-gray-100 dark:bg-dark-700 
-           hover:bg-gray-200 dark:hover:bg-dark-600 
-           text-gray-900 dark:text-white 
-           border border-gray-200 dark:border-dark-500 
-           font-medium rounded-lg transition-colors duration-200 
-           disabled:opacity-50 disabled:cursor-not-allowed;
-  }
-
-  /* Danger button */
-  .btn-danger {
-    @apply px-5 py-2.5 bg-error/10 hover:bg-error/20 
-           text-error border border-error/20 hover:border-error/30
-           font-medium rounded-lg transition-colors duration-200 
-           disabled:opacity-50 disabled:cursor-not-allowed;
-  }
-  
-  .btn-danger-solid {
-    @apply px-5 py-2.5 bg-error hover:bg-red-600 
-           text-white font-medium rounded-lg 
-           transition-colors duration-200
-           disabled:opacity-50 disabled:cursor-not-allowed;
-  }
-
-  /* Ghost button */
-  .btn-ghost {
-    @apply px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-dark-700 
-           text-gray-600 dark:text-gray-300 
-           font-medium rounded-lg transition-colors duration-200 
-           disabled:opacity-50 disabled:cursor-not-allowed;
-  }
-
-  /* Icon button */
-  .btn-icon {
-    @apply p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-700 
-           text-gray-500 dark:text-gray-400 
-           hover:text-gray-700 dark:hover:text-gray-200 
-           transition-colors duration-200;
-  }
-
-  /* Navigation link */
-  .nav-link {
-    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg 
-           text-gray-600 dark:text-gray-400 
-           hover:text-gray-900 dark:hover:text-white 
-           hover:bg-gray-100 dark:hover:bg-dark-700 
-           transition-colors duration-200 font-medium text-sm;
-  }
-  
-  .nav-link.active {
-    @apply bg-primary-500/10 text-primary-600 dark:text-primary-400;
-  }
-
-  /* Badge */
-  .badge {
-    @apply inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-full;
-  }
-
-  .badge-primary {
-    @apply badge bg-primary-500/10 text-primary-600 dark:text-primary-400;
-  }
-
-  .badge-success {
-    @apply badge bg-success/10 text-success;
-  }
-
-  .badge-warning {
-    @apply badge bg-warning/10 text-warning;
-  }
-
-  .badge-error {
-    @apply badge bg-error/10 text-error;
-  }
-
-  /* Progress bar */
-  .progress-bar {
-    @apply h-2 bg-gray-200 dark:bg-dark-600 rounded-full overflow-hidden;
-  }
-
-  .progress-bar-fill {
-    @apply h-full bg-primary-500 transition-all duration-500 ease-out;
-  }
-
-  /* Skeleton loader */
-  .skeleton {
-    @apply bg-gray-200 dark:bg-dark-700 rounded animate-pulse;
-  }
-
-  /* Modal backdrop */
-  .modal-backdrop {
-    @apply fixed inset-0 bg-black/60 
-           flex items-center justify-center z-50;
-  }
-
-  /* Modal content */
-  .modal-content {
-    @apply bg-white dark:bg-dark-800 rounded-xl 
-           border border-gray-200 dark:border-dark-600
-           w-full max-w-md m-4;
-  }
-
-  /* Stat card - Simple */
-  .stat-card {
-    @apply glass-card p-5;
-  }
-
-  /* Section header */
-  .section-header {
-    @apply flex items-center gap-3 mb-6;
-  }
-
-  .section-icon {
-    @apply p-2.5 rounded-xl;
+    @apply bg-accent-primary/20 text-accent-primary;
   }
 }
 
@@ -255,7 +73,6 @@
   .delay-100 { animation-delay: 100ms; }
   .delay-150 { animation-delay: 150ms; }
   .delay-200 { animation-delay: 200ms; }
-  .delay-300 { animation-delay: 300ms; }
 
   /* Hide scrollbar but keep functionality */
   .scrollbar-hide {
@@ -266,45 +83,11 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
-
-  /* Thin scrollbar */
-  .scrollbar-thin {
-    scrollbar-width: thin;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
-  }
 }
 
 /* Activity Heatmap styles */
 .heatmap-cell {
   @apply rounded-sm;
-}
-
-/* Form validation states */
-.input-error {
-  @apply border-error focus:ring-error/30;
-}
-
-.input-success {
-  @apply border-success focus:ring-success/30;
-}
-
-/* Responsive typography */
-@media (max-width: 640px) {
-  .text-responsive-xl {
-    @apply text-lg;
-  }
-
-  .text-responsive-2xl {
-    @apply text-xl;
-  }
-
-  .text-responsive-3xl {
-    @apply text-2xl;
-  }
 }
 
 /* Print styles */
@@ -317,8 +100,8 @@
     @apply bg-white text-black;
   }
 
-  .glass-card,
-  .card {
-    @apply bg-white border-gray-300 shadow-none;
+  .card,
+  .glass-card {
+    @apply bg-white border-gray-300;
   }
 }

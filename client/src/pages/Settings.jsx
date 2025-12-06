@@ -146,21 +146,21 @@ function Settings() {
     <div className="space-y-4 max-w-2xl mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-1">Settings</h1>
-        <p className="text-gray-400 text-sm">Manage your account preferences</p>
+        <h1 className="text-2xl font-bold mb-1 text-white">Settings</h1>
+        <p className="text-light-500 text-sm">Manage your account preferences</p>
       </div>
 
       {/* Profile Section */}
-      <div className="glass-card p-4">
+      <div className="bg-dark-800 border border-dark-600 rounded p-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <User className="w-4 h-4 text-primary-400" />
-            <h2 className="font-semibold">Profile</h2>
+            <User className="w-4 h-4 text-accent-primary" />
+            <h2 className="font-semibold text-white">Profile</h2>
           </div>
           {!isEditingProfile ? (
             <button 
               onClick={() => setIsEditingProfile(true)}
-              className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
+              className="text-xs text-accent-primary hover:text-accent-primary/80 flex items-center gap-1"
             >
               <Edit3 className="w-3 h-3" />
               Edit
@@ -169,7 +169,7 @@ function Settings() {
             <div className="flex items-center gap-2">
               <button 
                 onClick={handleCancelEdit}
-                className="text-xs text-gray-400 hover:text-white flex items-center gap-1"
+                className="text-xs text-light-400 hover:text-white flex items-center gap-1"
                 disabled={savingProfile}
               >
                 <X className="w-3 h-3" />
@@ -178,7 +178,7 @@ function Settings() {
               <button 
                 onClick={handleSaveProfile}
                 disabled={savingProfile}
-                className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
+                className="text-xs text-accent-primary hover:text-accent-primary/80 flex items-center gap-1"
               >
                 {savingProfile ? (
                   <Loader2 className="w-3 h-3 animate-spin" />
@@ -192,9 +192,9 @@ function Settings() {
         </div>
 
         <div className="flex items-start gap-4">
-          <div className="w-14 h-14 rounded-xl bg-primary-500 flex items-center justify-center text-xl font-bold text-white flex-shrink-0">
+          <div className="w-14 h-14 rounded bg-accent-primary flex items-center justify-center text-xl font-bold text-white flex-shrink-0">
             {user?.avatarUrl ? (
-              <img src={user.avatarUrl} alt="" className="w-full h-full rounded-xl object-cover" />
+              <img src={user.avatarUrl} alt="" className="w-full h-full rounded object-cover" />
             ) : (
               profileData.displayName?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'
             )}
@@ -202,7 +202,7 @@ function Settings() {
 
           <div className="flex-1 space-y-3">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Display Name</label>
+              <label className="block text-xs text-light-500 mb-1">Display Name</label>
               {profileLoading ? (
                 <div className="h-5 w-32 bg-dark-600 rounded animate-pulse" />
               ) : isEditingProfile ? (
@@ -214,20 +214,20 @@ function Settings() {
                   placeholder="Your name"
                 />
               ) : (
-                <p className="text-sm font-medium">{profileData.displayName || 'Not set'}</p>
+                <p className="text-sm font-medium text-white">{profileData.displayName || 'Not set'}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Email</label>
+              <label className="block text-xs text-light-500 mb-1">Email</label>
               <div className="flex items-center gap-2">
-                <Mail className="w-3.5 h-3.5 text-gray-500" />
-                <p className="text-sm text-gray-400">{user?.email}</p>
+                <Mail className="w-3.5 h-3.5 text-light-500" />
+                <p className="text-sm text-light-400">{user?.email}</p>
               </div>
             </div>
 
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Username</label>
+              <label className="block text-xs text-light-500 mb-1">Username</label>
               {profileLoading ? (
                 <div className="h-5 w-24 bg-dark-600 rounded animate-pulse" />
               ) : isEditingProfile && !originalProfile?.username ? (
@@ -239,14 +239,14 @@ function Settings() {
                   placeholder="Choose a username"
                 />
               ) : (
-                <p className="text-sm text-gray-400">
+                <p className="text-sm text-light-400">
                   {profileData.username ? `@${profileData.username}` : 'Not set'}
                 </p>
               )}
             </div>
 
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Bio</label>
+              <label className="block text-xs text-light-500 mb-1">Bio</label>
               {profileLoading ? (
                 <div className="h-5 w-40 bg-dark-600 rounded animate-pulse" />
               ) : isEditingProfile ? (
@@ -259,7 +259,7 @@ function Settings() {
                   maxLength={200}
                 />
               ) : (
-                <p className="text-sm text-gray-400">
+                <p className="text-sm text-light-400">
                   {profileData.bio || 'No bio yet'}
                 </p>
               )}
@@ -269,19 +269,19 @@ function Settings() {
       </div>
 
       {/* Connected Accounts */}
-      <div className="glass-card p-4">
+      <div className="bg-dark-800 border border-dark-600 rounded p-4">
         <div className="flex items-center gap-2 mb-4">
-          <LinkIcon className="w-4 h-4 text-primary-400" />
-          <h2 className="font-semibold">Connected Accounts</h2>
+          <LinkIcon className="w-4 h-4 text-accent-primary" />
+          <h2 className="font-semibold text-white">Connected Accounts</h2>
         </div>
 
         <div className="space-y-2">
-          <div className="flex items-center justify-between p-3 bg-dark-700/50 rounded-lg">
+          <div className="flex items-center justify-between p-3 bg-dark-700 border border-dark-600 rounded">
             <div className="flex items-center gap-3">
-              <Github className="w-5 h-5" />
+              <Github className="w-5 h-5 text-white" />
               <div>
-                <p className="text-sm font-medium">GitHub</p>
-                <p className="text-xs text-gray-500">
+                <p className="text-sm font-medium text-white">GitHub</p>
+                <p className="text-xs text-light-500">
                   {hasGithubLinked ? 'Connected' : 'Not connected'}
                 </p>
               </div>
@@ -291,7 +291,7 @@ function Settings() {
               <button
                 onClick={handleUnlinkGitHub}
                 disabled={unlinkingGithub || linkedProviders.length <= 1}
-                className="text-xs px-3 py-1.5 rounded-lg bg-dark-600 text-gray-400 hover:text-white hover:bg-dark-500 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                className="text-xs px-3 py-1.5 rounded bg-dark-600 text-light-400 hover:text-white hover:bg-dark-500 transition-colors disabled:opacity-50 flex items-center gap-1.5"
               >
                 {unlinkingGithub ? (
                   <Loader2 className="w-3 h-3 animate-spin" />
@@ -304,7 +304,7 @@ function Settings() {
               <button
                 onClick={handleLinkGitHub}
                 disabled={linkingGithub}
-                className="text-xs px-3 py-1.5 rounded-lg bg-primary-500/20 text-primary-400 hover:bg-primary-500/30 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                className="text-xs px-3 py-1.5 rounded bg-accent-primary/15 text-accent-primary hover:bg-accent-primary/25 transition-colors disabled:opacity-50 flex items-center gap-1.5"
               >
                 {linkingGithub ? (
                   <Loader2 className="w-3 h-3 animate-spin" />
@@ -317,7 +317,7 @@ function Settings() {
           </div>
 
           {hasGoogleLinked && (
-            <div className="flex items-center justify-between p-3 bg-dark-700/50 rounded-lg">
+            <div className="flex items-center justify-between p-3 bg-dark-700 border border-dark-600 rounded">
               <div className="flex items-center gap-3">
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -326,11 +326,11 @@ function Settings() {
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
                 <div>
-                  <p className="text-sm font-medium">Google</p>
-                  <p className="text-xs text-gray-500">Connected</p>
+                  <p className="text-sm font-medium text-white">Google</p>
+                  <p className="text-xs text-light-500">Connected</p>
                 </div>
               </div>
-              <div className="flex items-center gap-1 text-xs text-success">
+              <div className="flex items-center gap-1 text-xs text-[#22C55E]">
                 <Check className="w-3 h-3" />
                 Linked
               </div>
@@ -340,18 +340,18 @@ function Settings() {
       </div>
 
       {/* Account Security */}
-      <div className="glass-card p-4">
+      <div className="bg-dark-800 border border-dark-600 rounded p-4">
         <div className="flex items-center gap-2 mb-4">
-          <Shield className="w-4 h-4 text-amber-400" />
-          <h2 className="font-semibold">Account Security</h2>
+          <Shield className="w-4 h-4 text-[#F59E0B]" />
+          <h2 className="font-semibold text-white">Account Security</h2>
         </div>
 
-        <div className="flex items-center justify-between p-3 bg-dark-700/50 rounded-lg">
+        <div className="flex items-center justify-between p-3 bg-dark-700 border border-dark-600 rounded">
           <div className="flex items-center gap-3">
-            <Key className="w-4 h-4 text-gray-400" />
+            <Key className="w-4 h-4 text-light-400" />
             <div>
-              <p className="text-sm font-medium">Password</p>
-              <p className="text-xs text-gray-500">
+              <p className="text-sm font-medium text-white">Password</p>
+              <p className="text-xs text-light-500">
                 {isEmailUser 
                   ? 'Change your account password' 
                   : 'Managed by your OAuth provider'}
@@ -360,7 +360,7 @@ function Settings() {
           </div>
           <button 
             onClick={() => setChangePasswordModalOpen(true)}
-            className="text-xs px-3 py-1.5 rounded-lg bg-dark-600 text-gray-300 hover:text-white hover:bg-dark-500 transition-colors"
+            className="text-xs px-3 py-1.5 rounded bg-dark-600 text-light-300 hover:text-white hover:bg-dark-500 transition-colors"
           >
             {isEmailUser ? 'Change' : 'View'}
           </button>
@@ -368,22 +368,22 @@ function Settings() {
       </div>
 
       {/* Account Management */}
-      <div className="glass-card p-4 border border-amber-500/10">
+      <div className="bg-dark-800 border border-[#F59E0B]/20 rounded p-4">
         <div className="flex items-center gap-2 mb-4">
-          <Trash2 className="w-4 h-4 text-amber-500" />
-          <h2 className="font-semibold text-amber-500">Account Management</h2>
+          <Trash2 className="w-4 h-4 text-[#F59E0B]" />
+          <h2 className="font-semibold text-[#F59E0B]">Account Management</h2>
         </div>
 
-        <div className="flex items-center justify-between p-3 bg-amber-500/5 rounded-lg">
+        <div className="flex items-center justify-between p-3 bg-[#F59E0B]/5 border border-[#F59E0B]/10 rounded">
           <div>
-            <p className="text-sm font-medium">Delete Account</p>
-            <p className="text-xs text-gray-500">
+            <p className="text-sm font-medium text-white">Delete Account</p>
+            <p className="text-xs text-light-500">
               Permanently delete your account and all data
             </p>
           </div>
           <button 
             onClick={() => setDeleteModalOpen(true)}
-            className="text-xs px-3 py-1.5 rounded-lg bg-error/20 text-error hover:bg-error/30 transition-colors"
+            className="text-xs px-3 py-1.5 rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
           >
             Delete
           </button>

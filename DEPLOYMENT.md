@@ -7,6 +7,20 @@ Deploy DevOrbit to production using:
 
 ---
 
+## Optional Services (Enhanced Features)
+
+These services are **optional** - the app works without them but they add production-grade features:
+
+| Service | Purpose | Required? | Cost |
+|---------|---------|-----------|------|
+| **Redis** | Caching for faster API responses | ❌ Optional | Free tier available |
+| **Sentry** | Error tracking & monitoring | ❌ Optional | Free tier (5K errors/month) |
+| **PostHog** | Product analytics | ❌ Optional | Free tier (1M events/month) |
+
+> ⚠️ The app gracefully falls back if these services aren't configured. Set them up later for enhanced production monitoring.
+
+---
+
 ## Prerequisites
 
 1. GitHub account with your code pushed
@@ -28,6 +42,55 @@ Deploy DevOrbit to production using:
         └─────────────────────────┴──────────────────────────┘
                           Firebase Auth
 ```
+
+---
+
+## Vercel Deployment Configuration
+
+### Important: Preventing Deployment Loops
+
+The `client/vercel.json` includes smart deployment controls:
+
+```json
+{
+  "ignoreCommand": "bash -c \"[[ $VERCEL_GIT_COMMIT_MESSAGE == *'[skip ci]'* ]] || [[ $VERCEL_GIT_COMMIT_MESSAGE == *'[skip deploy]'* ]] || [[ $VERCEL_GIT_COMMIT_REF != 'main' && $VERCEL_GIT_COMMIT_REF != 'develop' ]]\"",
+  "git": {
+    "deploymentEnabled": {
+      "main": true,
+      "develop": true
+    }
+  }
+}
+```
+
+**To skip a deployment**, include `[skip ci]` or `[skip deploy]` in your commit message:
+```bash
+git commit -m "docs: update readme [skip ci]"
+```
+
+### Environment Variables for Vercel
+
+Add these in Vercel Project Settings → Environment Variables:
+
+| Key | Description | Required |
+|-----|-------------|----------|
+| `VITE_FIREBASE_API_KEY` | Firebase API key | ✅ |
+| `VITE_FIREBASE_AUTH_DOMAIN` | Firebase auth domain | ✅ |
+| `VITE_FIREBASE_PROJECT_ID` | Firebase project ID | ✅ |
+| `VITE_FIREBASE_STORAGE_BUCKET` | Firebase storage bucket | ✅ |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Firebase sender ID | ✅ |
+| `VITE_FIREBASE_APP_ID` | Firebase app ID | ✅ |
+| `VITE_API_URL` | Backend API URL (with `/api/v1`) | ✅ |
+
+### Optional Environment Variables for Vercel
+
+| Key | Description | Required |
+|-----|-------------|----------|
+| `VITE_SENTRY_DSN` | Sentry DSN for error tracking | ❌ Optional |
+| `VITE_POSTHOG_KEY` | PostHog project API key | ❌ Optional |
+| `VITE_POSTHOG_HOST` | PostHog host (default: https://app.posthog.com) | ❌ Optional |
+
+> ⚠️ The app will build even without env vars but show a warning. Ensure all required vars are set for production.
 
 ---
 
@@ -97,6 +160,17 @@ Click **Edit** on Environment Variables and add:
 | `PORT` | `3001` | No |
 | `CORS_ORIGIN` | `https://your-app.vercel.app` | No |
 | `FIREBASE_SERVICE_ACCOUNT` | *(entire JSON content)* | ✅ Yes |
+
+### Optional Environment Variables for DigitalOcean
+
+| Variable | Value | Encrypt |
+|----------|-------|---------|
+| `REDIS_URL` | Redis connection URL (e.g., `redis://user:pass@host:port`) | ✅ Yes |
+| `SENTRY_DSN` | Sentry DSN for server error tracking | ❌ No |
+
+> 💡 **Redis**: If not configured, the app uses in-memory caching (fine for low-traffic apps)
+> 
+> 💡 **Sentry**: If not configured, errors are logged to console only
 
 **For FIREBASE_SERVICE_ACCOUNT:**
 1. Open your `serviceAccountKey.json` file
@@ -169,9 +243,9 @@ Add these in the Vercel project settings:
 | `VITE_FIREBASE_STORAGE_BUCKET` | `your-project.appspot.com` |
 | `VITE_FIREBASE_MESSAGING_SENDER_ID` | Your sender ID |
 | `VITE_FIREBASE_APP_ID` | Your Firebase app ID |
-| `VITE_API_URL` | `https://your-api.ondigitalocean.app/api` |
+| `VITE_API_URL` | `https://your-api.ondigitalocean.app/api/v1` |
 
-> ⚠️ Use your actual DigitalOcean URL from Step 2.6
+> ⚠️ Use your actual DigitalOcean URL from Step 2.6. Make sure to include `/api/v1` at the end.
 
 ### 3.4 Deploy
 
@@ -260,7 +334,7 @@ service cloud.firestore {
 
 ### "Network Error" or "Failed to fetch"
 1. Check CORS_ORIGIN in DigitalOcean matches your Vercel URL exactly
-2. Make sure VITE_API_URL in Vercel includes `/api` at the end
+2. Make sure VITE_API_URL in Vercel includes `/api/v1` at the end (not just `/api`)
 3. Check DigitalOcean logs for errors
 
 ### Authentication not working
@@ -294,15 +368,73 @@ service cloud.firestore {
 
 ---
 
+## Optional Services Setup
+
+### Redis (Caching)
+
+Redis provides faster API responses through caching. Without it, the app uses in-memory caching.
+
+**Option 1: DigitalOcean Managed Redis** (~$15/month)
+1. DigitalOcean Dashboard → **Databases** → **Create Database**
+2. Choose **Redis**
+3. Select the $15/month plan
+4. Copy the connection string and add as `REDIS_URL` env var
+
+**Option 2: Upstash (Free Tier)**
+1. Go to https://upstash.com
+2. Create a Redis database (free tier: 10K commands/day)
+3. Copy the Redis URL and add as `REDIS_URL` env var
+
+**Option 3: Skip It**
+- The app works fine without Redis
+- In-memory caching handles low to medium traffic
+
+### Sentry (Error Tracking)
+
+Sentry captures and alerts you about production errors.
+
+1. Go to https://sentry.io and create an account
+2. Create a new project (select **Node.js** for backend, **React** for frontend)
+3. Copy the DSN values:
+   - Add `SENTRY_DSN` to DigitalOcean (backend)
+   - Add `VITE_SENTRY_DSN` to Vercel (frontend)
+
+**Free tier includes:**
+- 5,000 errors/month
+- 7-day data retention
+- Email alerts
+
+### PostHog (Analytics)
+
+PostHog provides product analytics without compromising user privacy.
+
+1. Go to https://posthog.com and create an account
+2. Create a new project
+3. Copy the API key and add `VITE_POSTHOG_KEY` to Vercel
+
+**Free tier includes:**
+- 1 million events/month
+- Session recordings
+- Feature flags
+
+---
+
 ## Production Checklist
 
+### Required
 - [ ] HTTPS enabled (automatic on both platforms)
 - [ ] Environment variables set correctly
 - [ ] CORS configured properly
 - [ ] Firebase security rules deployed
 - [ ] OAuth providers configured for production URLs
 - [ ] Health check endpoint working
-- [ ] Error logging enabled
+- [ ] `VITE_API_URL` ends with `/api/v1`
+
+### Optional (Enhanced Production)
+- [ ] Redis caching enabled (`REDIS_URL` configured)
+- [ ] Sentry error tracking enabled (`SENTRY_DSN` configured)
+- [ ] PostHog analytics enabled (`VITE_POSTHOG_KEY` configured)
+- [ ] Custom domain configured
 
 ---
 
@@ -311,7 +443,7 @@ service cloud.firestore {
 | Resource | URL |
 |----------|-----|
 | Frontend | `https://your-app.vercel.app` |
-| Backend API | `https://your-api.ondigitalocean.app/api` |
+| Backend API | `https://your-api.ondigitalocean.app/api/v1` |
 | Firebase Console | https://console.firebase.google.com |
 | Vercel Dashboard | https://vercel.com/dashboard |
 | DigitalOcean Dashboard | https://cloud.digitalocean.com |

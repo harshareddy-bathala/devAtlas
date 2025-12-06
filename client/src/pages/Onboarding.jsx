@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Orbit, ArrowRight, Check, X, Loader2, User, AtSign, Target } from 'lucide-react';
+import { ArrowRight, Check, X, Loader2, User, AtSign, Target } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useOnboarding } from '../contexts/OnboardingContext';
+import { signOut } from '../lib/firebase';
 
 const STEPS = [
   { id: 'welcome', title: 'Welcome' },
@@ -32,12 +33,36 @@ function Onboarding() {
   });
   const [usernameStatus, setUsernameStatus] = useState({ checking: false, available: null, reason: null });
   const [saving, setSaving] = useState(false);
+  const [touched, setTouched] = useState({ displayName: false, username: false });
 
   useEffect(() => {
     if (user?.name) {
       setFormData(prev => ({ ...prev, displayName: user.name }));
     }
   }, [user]);
+
+  // Handle browser back button/gesture - sign out and go to signup
+  useEffect(() => {
+    const handlePopState = async (e) => {
+      e.preventDefault();
+      // Sign out the user
+      try {
+        await signOut();
+      } catch (error) {
+        console.error('Failed to sign out:', error);
+      }
+      // Navigate to signup page
+      navigate('/login?mode=signup', { replace: true });
+    };
+
+    // Push a state so we can catch the back button
+    window.history.pushState({ onboarding: true }, '');
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [navigate]);
 
   // Debounced username check
   const checkUsername = useCallback(async (username) => {
@@ -105,28 +130,38 @@ function Onboarding() {
   };
 
   return (
-    <div className="min-h-screen bg-dark-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Progress */}
-        <div className="flex items-center justify-center gap-2 mb-8">
-          {STEPS.map((s, i) => (
-            <div key={s.id} className="flex items-center">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
-                i < step ? 'bg-primary-500 text-white' :
-                i === step ? 'bg-primary-500/20 text-primary-400 border border-primary-500' :
-                'bg-dark-700 text-gray-500'
-              }`}>
-                {i < step ? <Check className="w-4 h-4" /> : i + 1}
-              </div>
-              {i < STEPS.length - 1 && (
-                <div className={`w-12 h-0.5 mx-1 ${i < step ? 'bg-primary-500' : 'bg-dark-600'}`} />
-              )}
-            </div>
-          ))}
-        </div>
+    <div className="min-h-screen bg-[#0A0A0B] flex flex-col">
+      {/* Header with Logo */}
+      <header className="p-6">
+        <Link to="/" className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded bg-[#8B5CF6] flex items-center justify-center text-lg">
+            🚀
+          </div>
+          <span className="font-semibold text-white text-lg">DevOrbit</span>
+        </Link>
+      </header>
 
-        {/* Content */}
-        <div className="glass-card p-6">
+      <div className="flex-1 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          {/* Progress Steps */}
+          <div className="flex items-center justify-center gap-2 mb-8">
+            {STEPS.map((s, i) => (
+              <div key={s.id} className="flex items-center">
+                <div className={`w-8 h-8 rounded flex items-center justify-center text-sm font-medium transition-colors ${
+                  i < step ? 'bg-[#8B5CF6] text-white' :
+                  i === step ? 'bg-[#8B5CF6]/20 text-[#8B5CF6] border border-[#8B5CF6]' :
+                  'bg-[#1A1A1D] text-[#666] border border-[#333]'
+                }`}>
+                  {i < step ? <Check className="w-4 h-4" /> : i + 1}
+                </div>
+                {i < STEPS.length - 1 && (
+                  <div className={`w-12 h-0.5 mx-1 ${i < step ? 'bg-[#8B5CF6]' : 'bg-[#333]'}`} />
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Content */}
           <AnimatePresence mode="wait">
             {/* Step 0: Welcome */}
             {step === 0 && (
@@ -137,39 +172,41 @@ function Onboarding() {
                 exit={{ opacity: 0, x: -20 }}
                 className="text-center"
               >
-                <div className="w-16 h-16 bg-primary-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                  <Orbit className="w-8 h-8 text-white" />
+                <div className="w-16 h-16 bg-[#8B5CF6] rounded flex items-center justify-center mx-auto mb-6 text-3xl">
+                  🚀
                 </div>
-                <h1 className="text-2xl font-bold mb-2">Welcome to DevOrbit</h1>
-                <p className="text-gray-400 mb-6">
+                <h1 className="text-2xl font-semibold text-white mb-2">Welcome to DevOrbit</h1>
+                <p className="text-[#888] mb-8">
                   Your personal space to track skills, manage projects, and grow as a developer.
                 </p>
+                
                 <div className="space-y-3 text-left mb-8">
-                  <div className="flex items-center gap-3 p-3 bg-dark-700/50 rounded-lg">
+                  <div className="flex items-center gap-3 p-4 bg-[#1A1A1D] border border-[#333] rounded">
                     <span className="text-xl">📚</span>
                     <div>
-                      <p className="text-sm font-medium">Track Your Skills</p>
-                      <p className="text-xs text-gray-500">From learning to mastery</p>
+                      <p className="text-sm font-medium text-white">Track Your Skills</p>
+                      <p className="text-xs text-[#666]">From learning to mastery</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 p-3 bg-dark-700/50 rounded-lg">
+                  <div className="flex items-center gap-3 p-4 bg-[#1A1A1D] border border-[#333] rounded">
                     <span className="text-xl">🚀</span>
                     <div>
-                      <p className="text-sm font-medium">Manage Projects</p>
-                      <p className="text-xs text-gray-500">Ideas to deployment</p>
+                      <p className="text-sm font-medium text-white">Manage Projects</p>
+                      <p className="text-xs text-[#666]">Ideas to deployment</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 p-3 bg-dark-700/50 rounded-lg">
+                  <div className="flex items-center gap-3 p-4 bg-[#1A1A1D] border border-[#333] rounded">
                     <span className="text-xl">📊</span>
                     <div>
-                      <p className="text-sm font-medium">Visualize Progress</p>
-                      <p className="text-xs text-gray-500">See your growth over time</p>
+                      <p className="text-sm font-medium text-white">Visualize Progress</p>
+                      <p className="text-xs text-[#666]">See your growth over time</p>
                     </div>
                   </div>
                 </div>
+                
                 <button
                   onClick={handleNext}
-                  className="w-full btn-primary flex items-center justify-center gap-2"
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-black font-medium rounded hover:bg-gray-100 transition-colors"
                 >
                   Get Started
                   <ArrowRight className="w-4 h-4" />
@@ -185,69 +222,89 @@ function Onboarding() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
               >
-                <h2 className="text-xl font-bold mb-1">Set Up Your Profile</h2>
-                <p className="text-gray-400 text-sm mb-6">Tell us a bit about yourself</p>
+                <h2 className="text-xl font-semibold text-white mb-1">Set Up Your Profile</h2>
+                <p className="text-[#888] text-sm mb-6">Tell us a bit about yourself</p>
 
-                <div className="space-y-4">
+                <div className="space-y-5">
                   {/* Display Name */}
                   <div>
-                    <label className="flex items-center gap-2 text-sm font-medium text-gray-400 mb-2">
-                      <User className="w-4 h-4" />
-                      Display Name <span className="text-error">*</span>
+                    <label className="flex items-center gap-2 text-sm font-medium text-white mb-2">
+                      <User className="w-4 h-4 text-[#888]" />
+                      Display Name <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       value={formData.displayName}
                       onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
-                      className="input-field"
+                      onBlur={() => setTouched(prev => ({ ...prev, displayName: true }))}
+                      className={`w-full px-4 py-3 bg-transparent border rounded text-white placeholder-[#666] focus:outline-none transition-colors ${
+                        touched.displayName && !formData.displayName.trim()
+                          ? 'border-red-500 focus:border-red-500'
+                          : 'border-[#333] focus:border-[#8B5CF6]'
+                      }`}
                       placeholder="Your name"
                       maxLength={50}
                     />
+                    {touched.displayName && !formData.displayName.trim() && (
+                      <p className="text-red-500 text-xs mt-2">Display name is required</p>
+                    )}
                   </div>
 
                   {/* Username */}
                   <div>
-                    <label className="flex items-center gap-2 text-sm font-medium text-gray-400 mb-2">
-                      <AtSign className="w-4 h-4" />
-                      Username <span className="text-error">*</span>
+                    <label className="flex items-center gap-2 text-sm font-medium text-white mb-2">
+                      <AtSign className="w-4 h-4 text-[#888]" />
+                      Username <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
                       <input
                         type="text"
                         value={formData.username}
                         onChange={handleUsernameChange}
-                        className={`input-field pr-10 ${
-                          usernameStatus.available === true ? 'border-success/50' :
-                          usernameStatus.available === false ? 'border-error/50' : ''
+                        onBlur={() => setTouched(prev => ({ ...prev, username: true }))}
+                        className={`w-full px-4 py-3 pr-12 bg-transparent border rounded text-white placeholder-[#666] focus:outline-none transition-colors ${
+                          usernameStatus.available === true ? 'border-[#22C55E] focus:border-[#22C55E]' :
+                          usernameStatus.available === false || (touched.username && formData.username.length < 3) ? 'border-red-500 focus:border-red-500' : 
+                          'border-[#333] focus:border-[#8B5CF6]'
                         }`}
                         placeholder="choose_username"
                       />
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2">
                         {usernameStatus.checking && (
-                          <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
+                          <Loader2 className="w-4 h-4 animate-spin text-[#666]" />
                         )}
                         {usernameStatus.available === true && (
-                          <Check className="w-4 h-4 text-success" />
+                          <Check className="w-4 h-4 text-[#22C55E]" />
                         )}
                         {usernameStatus.available === false && (
-                          <X className="w-4 h-4 text-error" />
+                          <X className="w-4 h-4 text-red-500" />
                         )}
                       </div>
                     </div>
                     {usernameStatus.reason && (
-                      <p className={`text-xs mt-1 ${usernameStatus.available ? 'text-success' : 'text-error'}`}>
+                      <p className={`text-xs mt-2 ${usernameStatus.available ? 'text-[#22C55E]' : 'text-red-500'}`}>
                         {usernameStatus.reason}
                       </p>
                     )}
-                    <p className="text-xs text-gray-500 mt-1">
+                    {touched.username && formData.username.length > 0 && formData.username.length < 3 && !usernameStatus.reason && (
+                      <p className="text-red-500 text-xs mt-2">
+                        Username must be at least 3 characters
+                      </p>
+                    )}
+                    {touched.username && formData.username.length === 0 && (
+                      <p className="text-red-500 text-xs mt-2">
+                        Username is required
+                      </p>
+                    )}
+                    <p className="text-xs text-[#666] mt-1">
                       3-20 characters, lowercase letters, numbers, underscores
                     </p>
                   </div>
 
                   {/* Purpose */}
                   <div>
-                    <label className="flex items-center gap-2 text-sm font-medium text-gray-400 mb-2">
-                      <Target className="w-4 h-4" />
+                    <label className="flex items-center gap-2 text-sm font-medium text-white mb-2">
+                      <Target className="w-4 h-4 text-[#888]" />
                       Why are you here?
                     </label>
                     <div className="grid grid-cols-2 gap-2">
@@ -256,14 +313,14 @@ function Onboarding() {
                           key={opt.value}
                           type="button"
                           onClick={() => setFormData({ ...formData, purpose: opt.value })}
-                          className={`p-3 rounded-lg text-left transition-colors ${
+                          className={`p-3 rounded text-left transition-colors ${
                             formData.purpose === opt.value
-                              ? 'bg-primary-500/20 border border-primary-500/50'
-                              : 'bg-dark-700/50 hover:bg-dark-600/50 border border-transparent'
+                              ? 'bg-[#8B5CF6]/20 border border-[#8B5CF6]'
+                              : 'bg-[#1A1A1D] hover:bg-[#232326] border border-[#333]'
                           }`}
                         >
                           <span className="text-lg">{opt.icon}</span>
-                          <p className="text-xs mt-1">{opt.label}</p>
+                          <p className="text-xs mt-1 text-white">{opt.label}</p>
                         </button>
                       ))}
                     </div>
@@ -273,7 +330,7 @@ function Onboarding() {
                 <button
                   onClick={handleNext}
                   disabled={!canProceed()}
-                  className="w-full btn-primary flex items-center justify-center gap-2 mt-6 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 mt-6 bg-white text-black font-medium rounded hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue
                   <ArrowRight className="w-4 h-4" />
@@ -290,28 +347,28 @@ function Onboarding() {
                 exit={{ opacity: 0, x: -20 }}
                 className="text-center"
               >
-                <div className="w-16 h-16 bg-success/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Check className="w-8 h-8 text-success" />
+                <div className="w-16 h-16 bg-[#22C55E]/20 rounded flex items-center justify-center mx-auto mb-6">
+                  <Check className="w-8 h-8 text-[#22C55E]" />
                 </div>
-                <h2 className="text-xl font-bold mb-2">You're All Set!</h2>
-                <p className="text-gray-400 mb-6">
-                  Welcome aboard, <span className="text-primary-400">@{formData.username}</span>! 
+                <h2 className="text-xl font-semibold text-white mb-2">You're All Set!</h2>
+                <p className="text-[#888] mb-6">
+                  Welcome aboard, <span className="text-[#8B5CF6]">@{formData.username}</span>! 
                   Your developer journey starts now.
                 </p>
 
-                <div className="p-4 bg-dark-700/50 rounded-lg mb-6 text-left">
-                  <h3 className="text-sm font-medium mb-2">Quick Tips:</h3>
-                  <ul className="space-y-2 text-sm text-gray-400">
+                <div className="p-4 bg-[#1A1A1D] border border-[#333] rounded mb-6 text-left">
+                  <h3 className="text-sm font-medium text-white mb-3">Quick Tips:</h3>
+                  <ul className="space-y-2 text-sm text-[#888]">
                     <li className="flex items-start gap-2">
-                      <span className="text-primary-400">→</span>
+                      <span className="text-[#8B5CF6]">→</span>
                       Add your first skill in Stack Tracker
                     </li>
                     <li className="flex items-start gap-2">
-                      <span className="text-primary-400">→</span>
+                      <span className="text-[#8B5CF6]">→</span>
                       Create a project to link with skills
                     </li>
                     <li className="flex items-start gap-2">
-                      <span className="text-primary-400">→</span>
+                      <span className="text-[#8B5CF6]">→</span>
                       Check the dashboard for progress
                     </li>
                   </ul>
@@ -320,7 +377,7 @@ function Onboarding() {
                 <button
                   onClick={handleComplete}
                   disabled={saving}
-                  className="w-full btn-primary flex items-center justify-center gap-2"
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-black font-medium rounded hover:bg-gray-100 transition-colors disabled:opacity-50"
                 >
                   {saving ? (
                     <>
