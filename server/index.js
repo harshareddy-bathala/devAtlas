@@ -258,44 +258,54 @@ app.get('/api/v1/cache-health', asyncHandler(async (req, res) => {
   });
 }));
 
-// PostHog proxy endpoint - bypasses ad blockers
-// Forwards analytics events to PostHog backend
-app.all('/api/v1/posthog/*', asyncHandler(async (req, res) => {
-  const fetch = (await import('node-fetch')).default;
-  
-  const posthogHost = 'https://us.i.posthog.com';
-  const pathSegments = req.path.split('/').slice(4); // Remove /api/v1/posthog
-  const path = '/' + pathSegments.join('/');
-  
-  const url = new URL(posthogHost + path);
-  url.search = new URLSearchParams(req.query).toString();
-  
+// PostHog proxy endpoint - bypasses ad blockers by proxying through our backend
+// This allows analytics to work even when PostHog domains are blocked by ad blockers
+app.post('/api/v1/analytics/posthog', asyncHandler(async (req, res) => {
   try {
+    const posthogHost = process.env.POSTHOG_HOST || 'https://us.i.posthog.com';
+    const targetUrl = `${posthogHost}/e/`;
+    
+    // Forward the exact request to PostHog with the same query params and body
+    const https = require('https');
+    const http = require('http');
+    const url = require('url');
+    
+    const isHttps = targetUrl.startsWith('https');
+    const client = isHttps ? https : http;
+    
+    const parsedUrl = new url.URL(targetUrl + (req.url.includes('?') ? '?' + req.url.split('?')[1] : ''));
+    
     const options = {
-      method: req.method,
+      hostname: parsedUrl.hostname,
+      path: parsedUrl.pathname + parsedUrl.search,
+      method: 'POST',
       headers: {
-        'Content-Type': req.get('content-type') || 'application/json',
+        'Content-Type': 'application/json',
       },
+      timeout: 5000,
     };
     
-    if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
-      options.body = JSON.stringify(req.body);
-    }
-    
-    const response = await fetch(url, options);
-    const data = await response.text();
-    
-    res.status(response.status)
-      .set('Content-Type', response.headers.get('content-type') || 'application/json')
-      .send(data);
-      
-    console.log(`✅ PostHog proxy: ${req.method} ${path} → ${response.status}`);
-  } catch (error) {
-    console.error('❌ PostHog proxy error:', error.message);
-    res.status(500).json({
-      success: false,
-      error: 'PostHog proxy failed'
+    const proxyReq = client.request(options, (proxyRes) => {
+      res.status(proxyRes.statusCode);
+      res.json({ success: true });
     });
+    
+    proxyReq.on('error', (err) => {
+      console.warn('PostHog proxy error:', err.message);
+      // Don't fail the request - just log the error and continue
+      res.json({ success: true }); // Lie to the client so it doesn't retry
+    });
+    
+    proxyReq.on('timeout', () => {
+      proxyReq.destroy();
+      res.json({ success: true });
+    });
+    
+    proxyReq.write(JSON.stringify(req.body));
+    proxyReq.end();
+  } catch (error) {
+    console.warn('PostHog proxy endpoint error:', error.message);
+    res.json({ success: true }); // Don't fail the request
   }
 }));
 

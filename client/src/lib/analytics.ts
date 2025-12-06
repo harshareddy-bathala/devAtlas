@@ -45,14 +45,6 @@ export function initAnalytics(): void {
     // Respect Do Not Track
     respect_dnt: true,
     
-    // Ad blocker detection and workaround
-    request_timeout_ms: 5000,
-    on_xhr_error: (error: XMLHttpRequest) => {
-      if (error.status === 0) {
-        console.warn('⚠️ PostHog blocked by ad blocker or network issue - events queued for retry');
-      }
-    },
-    
     // Don't opt out in dev - allow testing
     loaded: () => {
       console.log(`✅ PostHog loaded (${isProduction ? 'production' : 'development'} mode, host: ${POSTHOG_HOST})`);
