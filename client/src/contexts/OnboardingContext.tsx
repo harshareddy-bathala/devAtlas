@@ -28,10 +28,15 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
       if (lastUserId.current === userId) {
         setIsOnboarded(profile.isOnboarded === true);
       }
-    } catch (error) {
-      // If error fetching profile, assume not onboarded
+    } catch (error: any) {
+      // Only mark as not onboarded on explicit 404 (user doesn't exist)
+      // For network/CORS errors, keep the previous state and continue checking
       if (lastUserId.current === userId) {
-        setIsOnboarded(false);
+        if (error?.code === 'NOT_FOUND' || error?.status === 404) {
+          setIsOnboarded(false);
+        }
+        // For CORS, network errors, or other issues: don't change state
+        // The app will retry automatically or show the onboarding later if needed
       }
     } finally {
       if (lastUserId.current === userId) {
