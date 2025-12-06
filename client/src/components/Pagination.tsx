@@ -151,7 +151,7 @@ interface PageInfoProps {
   itemsPerPage: number;
 }
 
-export function PageInfo({ currentPage, totalPages, totalItems, itemsPerPage }: PageInfoProps) {
+export function PageInfo({ currentPage, totalItems, itemsPerPage }: PageInfoProps) {
   const start = (currentPage - 1) * itemsPerPage + 1;
   const end = Math.min(currentPage * itemsPerPage, totalItems);
 
