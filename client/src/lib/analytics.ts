@@ -28,6 +28,7 @@ export function initAnalytics(): void {
 
   posthog.init(POSTHOG_KEY, {
     api_host: POSTHOG_HOST,
+    defaults: '2025-05-24',
     
     // Privacy settings
     persistence: 'localStorage',
