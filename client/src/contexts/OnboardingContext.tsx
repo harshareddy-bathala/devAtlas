@@ -22,21 +22,35 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     if (checkInProgress.current) return;
     checkInProgress.current = true;
     
+    // Set a timeout to prevent infinite loading (reduced to 5 seconds)
+    const timeout = setTimeout(() => {
+      if (lastUserId.current === userId && checkInProgress.current) {
+        console.warn('Onboarding check timed out, assuming onboarded');
+        setIsOnboarded(true);
+        setIsChecking(false);
+        checkInProgress.current = false;
+      }
+    }, 5000); // 5 second timeout
+    
     try {
       const profile = await api.getProfile();
+      clearTimeout(timeout);
       // Only update if this is still the current user
       if (lastUserId.current === userId) {
         setIsOnboarded(profile.isOnboarded === true);
       }
     } catch (error: any) {
+      clearTimeout(timeout);
       // Only mark as not onboarded on explicit 404 (user doesn't exist)
-      // For network/CORS errors, keep the previous state and continue checking
+      // For network/CORS errors, assume onboarded to prevent blocking
       if (lastUserId.current === userId) {
         if (error?.code === 'NOT_FOUND' || error?.status === 404) {
           setIsOnboarded(false);
+        } else {
+          // On error, assume onboarded to not block the user
+          console.error('Onboarding check failed, assuming onboarded:', error);
+          setIsOnboarded(true);
         }
-        // For CORS, network errors, or other issues: don't change state
-        // The app will retry automatically or show the onboarding later if needed
       }
     } finally {
       if (lastUserId.current === userId) {

@@ -17,11 +17,9 @@ export function Spinner({ size = 'md', className = '' }) {
 // Full page loading state
 export function PageLoader({ message = 'Loading...' }) {
   return (
-    <div className="flex items-center justify-center h-full min-h-[400px]">
-      <div className="text-center">
-        <Spinner size="xl" className="mx-auto mb-4 text-accent-primary" />
-        <p className="text-light-500">{message}</p>
-      </div>
+    <div className="text-center">
+      <Spinner size="xl" className="mx-auto mb-4 text-accent-primary" />
+      <p className="text-light-500">{message}</p>
     </div>
   );
 }

@@ -101,6 +101,7 @@ function Onboarding() {
 
   const canProceed = () => {
     if (step === 1) {
+      // Display name and valid username are required; purpose is optional
       return formData.displayName.trim().length >= 1 && 
              formData.username.length >= 3 && 
              usernameStatus.available === true;
@@ -131,14 +132,27 @@ function Onboarding() {
 
   return (
     <div className="min-h-screen bg-[#0A0A0B] flex flex-col">
-      {/* Header with Logo */}
-      <header className="p-6">
+      {/* Header with Logo and Estimated Time */}
+      <header className="p-6 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
           <div className="w-8 h-8 rounded bg-[#8B5CF6] flex items-center justify-center text-lg">
             🚀
           </div>
           <span className="font-semibold text-white text-lg">DevOrbit</span>
         </Link>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-[#666]">⏱️ ~2 minutes</span>
+          <button
+            onClick={() => {
+              if (window.confirm('Skip setup? You can complete your profile later in Settings.')) {
+                navigate('/dashboard', { replace: true });
+              }
+            }}
+            className="text-xs text-[#888] hover:text-white transition-colors"
+          >
+            Skip for now
+          </button>
+        </div>
       </header>
 
       <div className="flex-1 flex items-center justify-center p-4">
@@ -305,7 +319,7 @@ function Onboarding() {
                   <div>
                     <label className="flex items-center gap-2 text-sm font-medium text-white mb-2">
                       <Target className="w-4 h-4 text-[#888]" />
-                      Why are you here?
+                      What brings you here? <span className="text-xs text-[#666] font-normal">(Optional)</span>
                     </label>
                     <div className="grid grid-cols-2 gap-2">
                       {PURPOSE_OPTIONS.map(opt => (

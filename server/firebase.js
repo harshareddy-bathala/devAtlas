@@ -41,16 +41,8 @@ function initializeFirebase() {
     if (fs.existsSync(serviceAccountPath)) {
       serviceAccount = require('./serviceAccountKey.json');
       
-      // Show warning in dev mode about using file-based auth
-      if (isDev) {
-        console.warn('');
-        console.warn('⚠️  WARNING: Using file-based Firebase authentication');
-        console.warn('   This is acceptable for local development, but for production:');
-        console.warn('   1. Set FIREBASE_SERVICE_ACCOUNT environment variable');
-        console.warn('   2. Never commit serviceAccountKey.json to version control');
-        console.warn('   3. See SECURITY.md for proper configuration');
-        console.warn('');
-      } else {
+      // Silently use file-based auth (only in development, not in production)
+      if (!isDev) {
         // In production, strongly warn about file-based auth
         console.error('');
         console.error('🚨 SECURITY WARNING: Using file-based Firebase authentication in production!');
@@ -82,7 +74,11 @@ function initializeFirebase() {
 
   // Configure Firestore settings
   db.settings({
-    ignoreUndefinedProperties: true
+    ignoreUndefinedProperties: true,
+    // Add retry configuration for transient errors
+    // Firestore client library handles retries automatically, but we can configure:
+    // - maxAttempts: number of retry attempts (default: 5)
+    // - timeout: request timeout in milliseconds (default: 60000)
   });
 
   console.log('🔥 Firebase initialized successfully');

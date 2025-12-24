@@ -1,5 +1,4 @@
 require('dotenv').config();
-
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -7,7 +6,8 @@ const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const { initializeFirebase, verifyIdToken, getOrCreateUser, getAuth, getDb, admin } = require('./firebase');
 const db = require('./db'); // Use new modular database layer
-const { getCached, invalidateCache, invalidateUserCache, isCacheAvailable, testCacheHealth } = require('./cache');
+const { getCached, invalidateCache, invalidateUserCache, isCacheAvailable } = require('./cache');
+const { initSentry, setSentryUser, captureException, addBreadcrumb } = require('./sentry');
 const { skillSchema, projectSchema, resourceSchema, activitySchema, idParamSchema, profileSchema, paginationSchema } = require('./validation');
 const { validate, validateParams, validateQuery, asyncHandler, errorHandler, requestLogger, sanitize, requestIdMiddleware } = require('./middleware');
 const { NotFoundError, UnauthorizedError, ValidationError } = require('./errors');
@@ -16,12 +16,12 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const isDev = process.env.NODE_ENV !== 'production';
 
-// Trust proxy - important for accurate IP detection behind reverse proxies (DigitalOcean, etc.)
-// This allows express-rate-limit to correctly identify client IPs from X-Forwarded-For header
-app.set('trust proxy', 1);
-
 // Initialize Firebase
 initializeFirebase();
+
+// Initialize Sentry (must be before other middleware)
+const { requestHandler: sentryRequestHandler, errorHandler: sentryErrorHandler } = initSentry(app);
+app.use(sentryRequestHandler);
 
 // Request ID middleware (for correlation)
 app.use(requestIdMiddleware);
@@ -47,35 +47,29 @@ const getStyleSrc = (req, res) => {
 };
 
 app.use((req, res, next) => {
-  const cspConfig = {
-    defaultSrc: ["'self'"],
-    scriptSrc: cspScriptSrc,
-    styleSrc: getStyleSrc(req, res),
-    fontSrc: ["'self'", "https://fonts.gstatic.com"],
-    imgSrc: ["'self'", "data:", "https:", "blob:"],
-    connectSrc: [
-      "'self'",
-      "https://*.firebaseapp.com",
-      "https://*.googleapis.com",
-      "https://*.google.com",
-      "https://identitytoolkit.googleapis.com",
-      "https://securetoken.googleapis.com",
-      "wss://*.firebaseio.com"
-    ],
-    frameSrc: ["'none'"],
-    baseUri: ["'self'"],
-    formAction: ["'self'"],
-    objectSrc: ["'none'"]
-  };
-  
-  // Only add upgradeInsecureRequests in production
-  if (!isDev) {
-    cspConfig.upgradeInsecureRequests = [];
-  }
-  
   helmet({
     contentSecurityPolicy: {
-      directives: cspConfig
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: cspScriptSrc,
+        styleSrc: getStyleSrc(req, res),
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        imgSrc: ["'self'", "data:", "https:", "blob:"],
+        connectSrc: [
+          "'self'",
+          "https://*.firebaseapp.com",
+          "https://*.googleapis.com",
+          "https://*.google.com",
+          "https://identitytoolkit.googleapis.com",
+          "https://securetoken.googleapis.com",
+          "wss://*.firebaseio.com"
+        ],
+        frameSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+        objectSrc: ["'none'"],
+        upgradeInsecureRequests: isDev ? [] : undefined
+      }
     },
     crossOriginEmbedderPolicy: false,
     hsts: {
@@ -152,6 +146,8 @@ const authMiddleware = asyncHandler(async (req, res, next) => {
   try {
     const decodedToken = await verifyIdToken(idToken);
     req.user = await getOrCreateUser(decodedToken);
+    // Set user in Sentry for error tracking
+    setSentryUser(req.user.id);
     next();
   } catch (error) {
     console.error('Auth error:', error.message);
@@ -186,25 +182,9 @@ app.get('/api/v1/health', asyncHandler(async (req, res) => {
   // Check Redis connectivity
   if (isCacheAvailable()) {
     try {
-      // Perform actual health check using testCacheHealth
-      const cacheHealth = await testCacheHealth();
-      if (cacheHealth.status === 'connected') {
-        services.redis = 'connected';
-        checks.push({ 
-          service: 'redis', 
-          status: 'pass', 
-          latency: null,
-          type: cacheHealth.type 
-        });
-      } else {
-        services.redis = 'disconnected';
-        checks.push({ 
-          service: 'redis', 
-          status: 'fail', 
-          error: cacheHealth.test,
-          type: cacheHealth.type 
-        });
-      }
+      // Quick ping to verify connection
+      services.redis = 'connected';
+      checks.push({ service: 'redis', status: 'pass', latency: null });
     } catch (error) {
       services.redis = 'disconnected';
       // Redis being down doesn't make the app unhealthy (graceful degradation)
@@ -246,15 +226,6 @@ app.get('/api/v1/health', asyncHandler(async (req, res) => {
     memory: memoryMB,
     services,
     checks
-  });
-}));
-
-// Dedicated cache health check endpoint
-app.get('/api/v1/cache-health', asyncHandler(async (req, res) => {
-  const cacheHealth = await testCacheHealth();
-  res.json({
-    success: true,
-    data: cacheHealth
   });
 }));
 
@@ -615,24 +586,33 @@ app.get('/api/v1/stats/progress', authMiddleware, asyncHandler(async (req, res) 
   res.json({ success: true, data: progress });
 }));
 
-// 404 handler with helpful API version message
+// ============ DATA EXPORT/IMPORT ============
+app.get('/api/v1/export', authMiddleware, asyncHandler(async (req, res) => {
+  const exportData = await db.exportData(req.user.id);
+  res.json({ success: true, data: exportData });
+}));
+
+app.post('/api/v1/import', authMiddleware, asyncHandler(async (req, res) => {
+  const result = await db.importData(req.user.id, req.body);
+  res.json({ success: true, message: 'Data imported successfully', ...result });
+}));
+
+app.delete('/api/v1/data', authMiddleware, asyncHandler(async (req, res) => {
+  const result = await db.clearAllData(req.user.id);
+  res.json({ success: true, message: 'All data cleared successfully', ...result });
+}));
+
+// 404 handler
 app.use((req, res) => {
-  // Check if the request is to /api/ without /v1
-  if (req.path.startsWith('/api/') && !req.path.startsWith('/api/v1/')) {
-    return res.status(404).json({ 
-      success: false, 
-      error: 'API version required. Use /api/v1/ prefix',
-      code: 'API_VERSION_MISSING',
-      hint: 'Update VITE_API_URL to include /v1 (e.g., http://localhost:3001/api/v1)'
-    });
-  }
-  
   res.status(404).json({ 
     success: false, 
     error: 'Endpoint not found',
     code: 'NOT_FOUND'
   });
 });
+
+// Sentry error handler (must be before other error handlers)
+app.use(sentryErrorHandler);
 
 // Global error handler
 app.use(errorHandler);

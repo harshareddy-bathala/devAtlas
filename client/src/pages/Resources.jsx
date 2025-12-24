@@ -295,7 +295,11 @@ function Resources() {
   };
 
   if (loading) {
-    return <PageLoader />;
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <PageLoader />
+      </div>
+    );
   }
 
   return (
@@ -388,10 +392,31 @@ function Resources() {
           ))}
           
           {filteredResources.length === 0 && (
-            <div className="col-span-full text-center py-12 text-light-500">
-              <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>No resources found</p>
-              <p className="text-sm">Start building your learning library</p>
+            <div className="col-span-full text-center py-16 px-4">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-dark-700 flex items-center justify-center">
+                <BookOpen className="w-8 h-8 text-accent-primary" aria-hidden="true" />
+              </div>
+              <p className="text-light-300 mb-2 font-medium">
+                {resources.length === 0 ? 'No resources yet' : 'No resources match your filters'}
+              </p>
+              <p className="text-sm text-light-500 mb-4">
+                {resources.length === 0 
+                  ? 'Save helpful links, docs, videos, and courses here' 
+                  : 'Try adjusting your search or filters'}
+              </p>
+              {resources.length === 0 && (
+                <button
+                  onClick={() => {
+                    setEditingResource(null);
+                    reset({ title: '', url: '', type: 'article', skillId: '', projectId: '', notes: '' });
+                    setShowModal(true);
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-accent-primary hover:bg-accent-primary-hover text-white rounded transition-colors text-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Your First Resource
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -429,10 +454,31 @@ function Resources() {
           )}
           
           {filteredResources.length === 0 && (
-            <div className="text-center py-12 text-light-500">
-              <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>No resources found</p>
-              <p className="text-sm">Start building your learning library</p>
+            <div className="text-center py-16 px-4">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-dark-700 flex items-center justify-center">
+                <BookOpen className="w-8 h-8 text-accent-primary" aria-hidden="true" />
+              </div>
+              <p className="text-light-300 mb-2 font-medium">
+                {resources.length === 0 ? 'No resources yet' : 'No resources match your filters'}
+              </p>
+              <p className="text-sm text-light-500 mb-4">
+                {resources.length === 0 
+                  ? 'Save helpful links, docs, videos, and courses here' 
+                  : 'Try adjusting your search or filters'}
+              </p>
+              {resources.length === 0 && (
+                <button
+                  onClick={() => {
+                    setEditingResource(null);
+                    reset({ title: '', url: '', type: 'article', skillId: '', projectId: '', notes: '' });
+                    setShowModal(true);
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-accent-primary hover:bg-accent-primary-hover text-white rounded transition-colors text-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Your First Resource
+                </button>
+              )}
             </div>
           )}
         </div>

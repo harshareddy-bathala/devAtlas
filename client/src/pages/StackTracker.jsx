@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -230,7 +230,11 @@ function StackTracker() {
   };
 
   if (loading) {
-    return <PageLoader />;
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <PageLoader />
+      </div>
+    );
   }
 
   return (
@@ -329,8 +333,26 @@ function StackTracker() {
                 })}
                 
                 {statusSkills.length === 0 && (
-                  <div className="text-center py-8 text-light-500">
-                    <p className="text-sm">No skills here yet</p>
+                  <div className="text-center py-12 px-4">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-dark-700 flex items-center justify-center">
+                      {React.createElement(STATUS_CONFIG[status].icon, { 
+                        className: `w-8 h-8 ${STATUS_CONFIG[status].color.split(' ')[1]}`,
+                        'aria-hidden': 'true'
+                      })}
+                    </div>
+                    <p className="text-light-300 mb-2 font-medium">No {STATUS_CONFIG[status].label.toLowerCase()} yet</p>
+                    <p className="text-sm text-light-500 mb-4">{STATUS_CONFIG[status].description}</p>
+                    <button
+                      onClick={() => {
+                        setEditingSkill(null);
+                        reset({ status, name: '', category: 'language', icon: '📚' });
+                        setShowModal(true);
+                      }}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-accent-primary hover:bg-accent-primary-hover text-white rounded transition-colors text-sm"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Your First Skill
+                    </button>
                   </div>
                 )}
               </div>

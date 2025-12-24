@@ -156,6 +156,7 @@ async function getCached(key, fetchFn, ttl = 300) {
 
 /**
  * Invalidate cache entries matching a pattern
+ * Uses SCAN for production safety (O(1) per iteration instead of O(n) with keys())
  * @param {string} pattern - Redis key pattern (supports * wildcard)
  * @returns {Promise<number>} - Number of keys deleted
  */
@@ -165,23 +166,48 @@ async function invalidateCache(pattern) {
   }
 
   try {
-    // Find all matching keys
-    // Both Upstash and ioredis support the keys() method
-    const keys = await redis.keys(pattern);
+    const keysToDelete = [];
     
-    if (!keys || keys.length === 0) {
+    if (isUpstash) {
+      // Upstash doesn't support SCAN, but it's serverless so keys() is acceptable
+      const keys = await redis.keys(pattern);
+      if (keys && keys.length > 0) {
+        keysToDelete.push(...keys);
+      }
+    } else {
+      // For ioredis, use SCAN for production safety
+      // SCAN is O(1) per iteration and doesn't block the server
+      let cursor = '0';
+      do {
+        const [nextCursor, keys] = await redis.scan(
+          cursor,
+          'MATCH',
+          pattern,
+          'COUNT',
+          100 // Process 100 keys per iteration
+        );
+        cursor = nextCursor;
+        if (keys && keys.length > 0) {
+          keysToDelete.push(...keys);
+        }
+      } while (cursor !== '0');
+    }
+    
+    if (keysToDelete.length === 0) {
       return 0;
     }
 
-    // Delete all matching keys
-    // Upstash del() accepts an array, ioredis accepts spread args
-    let deleted;
-    if (isUpstash) {
-      deleted = await redis.del(...keys);
-    } else {
-      deleted = await redis.del(...keys);
+    // Delete in batches to avoid overwhelming Redis
+    const batchSize = 100;
+    let totalDeleted = 0;
+    
+    for (let i = 0; i < keysToDelete.length; i += batchSize) {
+      const batch = keysToDelete.slice(i, i + batchSize);
+      const deleted = await redis.del(...batch);
+      totalDeleted += typeof deleted === 'number' ? deleted : batch.length;
     }
-    return typeof deleted === 'number' ? deleted : keys.length;
+    
+    return totalDeleted;
   } catch (error) {
     console.warn(`Failed to invalidate cache pattern ${pattern}:`, error.message);
     return 0;

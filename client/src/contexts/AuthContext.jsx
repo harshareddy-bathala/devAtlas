@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { 
   auth, 
   signIn as firebaseSignIn, 
@@ -11,12 +11,22 @@ import {
 import { clearTokenCache } from '../utils/api';
 import api from '../utils/api';
 
+// Stub function for user identification (analytics placeholder)
+const identifyUser = (userId) => {
+  // This is a placeholder for analytics integration
+  // In production, integrate with your analytics service (PostHog, Mixpanel, etc.)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('User identified:', userId);
+  }
+};
+
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
+  const loadingTimeout = useRef(null);
 
   // Function to refresh user profile from API
   const refreshUserProfile = useCallback(async () => {
@@ -42,8 +52,17 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
+    // Safety timeout to prevent infinite loading (reduced to 3 seconds)
+    loadingTimeout.current = setTimeout(() => {
+      if (isLoading) {
+        console.warn('Auth loading timeout reached, stopping loader');
+        setIsLoading(false);
+      }
+    }, 3000); // 3 second timeout
+    
     // Listen for Firebase auth state changes
     const unsubscribe = onAuthChange(async (firebaseUser) => {
+      clearTimeout(loadingTimeout.current);
       if (firebaseUser) {
         // Force a fresh token to ensure it's valid
         try {
@@ -75,7 +94,10 @@ export function AuthProvider({ children }) {
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      clearTimeout(loadingTimeout.current);
+      unsubscribe();
+    };
   }, [refreshUserProfile]);
 
   const signIn = async (email, password) => {

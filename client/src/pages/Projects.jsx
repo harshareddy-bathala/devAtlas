@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -107,7 +107,7 @@ function Projects() {
     loadProjects(page);
   };
 
-  const openModal = (project = null) => {
+  const openModal = (project = null, statusOverride = null) => {
     if (project) {
       setEditingProject(project);
       reset({
@@ -123,7 +123,7 @@ function Projects() {
       reset({
         name: '',
         description: '',
-        status: 'idea',
+        status: statusOverride || 'idea',
         githubUrl: '',
         demoUrl: '',
         techStack: ''
@@ -228,7 +228,11 @@ function Projects() {
   };
 
   if (loading) {
-    return <PageLoader />;
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <PageLoader />
+      </div>
+    );
   }
 
   return (
@@ -354,8 +358,22 @@ function Projects() {
                 ))}
                 
                 {statusProjects.length === 0 && (
-                  <div className="text-center py-8 text-light-500">
-                    <p className="text-sm">No projects here yet</p>
+                  <div className="text-center py-12 px-4">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-dark-700 flex items-center justify-center">
+                      {React.createElement(config.icon, { 
+                        className: `w-8 h-8 ${config.color.split(' ')[1]}`,
+                        'aria-hidden': 'true'
+                      })}
+                    </div>
+                    <p className="text-light-300 mb-2 font-medium">No {config.label.toLowerCase()} yet</p>
+                    <p className="text-sm text-light-500 mb-4">{config.description}</p>
+                    <button
+                      onClick={() => openModal(null, status)}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-accent-primary hover:bg-accent-primary-hover text-white rounded transition-colors text-sm"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Your First {status === 'idea' ? 'Idea' : 'Project'}
+                    </button>
                   </div>
                 )}
               </div>

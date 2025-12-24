@@ -1,5 +1,6 @@
-import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { lazy, Suspense, useEffect } from 'react';
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext.jsx';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -28,11 +29,33 @@ function PageLoader() {
   );
 }
 
-// Full page loader for auth checks
+// Full page loader for auth checks with timeout safety
 function FullPageLoader() {
+  const [showTimeout, setShowTimeout] = React.useState(false);
+
+  useEffect(() => {
+    // Show timeout message after 5 seconds
+    const timer = setTimeout(() => {
+      setShowTimeout(true);
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-dark-900">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-dark-900">
       <Loader2 className="w-8 h-8 animate-spin text-accent-primary" />
+      {showTimeout && (
+        <div className="mt-4 text-center">
+          <p className="text-light-400 text-sm mb-2">Taking longer than expected...</p>
+          <button
+            onClick={() => window.location.href = '/login'}
+            className="text-accent-primary hover:text-accent-primary-hover text-sm underline"
+          >
+            Go to login
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -119,9 +142,28 @@ function LandingRoute() {
   return <Landing />;
 }
 
+// Scroll to top on route change and clear browser navigation cache
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    // Scroll to top
+    window.scrollTo(0, 0);
+    
+    // Clear browser's scroll restoration to prevent state persistence
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+  }, [pathname]);
+
+  return null;
+}
+
 function AppRoutes() {
   return (
-    <Suspense fallback={<PageLoader />}>
+    <>
+      <ScrollToTop />
+      <Suspense fallback={<PageLoader />}>
       <Routes>
         {/* Landing page - public facing */}
         <Route path="/" element={<LandingRoute />} />
@@ -200,10 +242,18 @@ function AppRoutes() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
+    </>
   );
 }
 
 export default function App() {
+  // Disable browser's scroll restoration globally
+  useEffect(() => {
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+  }, []);
+  
   return (
     <ErrorBoundary>
       <ThemeProvider>

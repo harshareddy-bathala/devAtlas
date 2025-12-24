@@ -13,7 +13,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext.jsx';
-import TimerWidget from './TimerWidget';
+// import TimerWidget from './TimerWidget'; // TODO: Uncomment when backend is implemented
 import toast from 'react-hot-toast';
 
 const navItems = [
@@ -65,8 +65,18 @@ export default function Layout({ children }: LayoutProps) {
 
   return (
     <div className="min-h-screen bg-dark-900 text-white">
+      {/* Skip to main content link for accessibility */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-accent-primary focus:text-white focus:rounded focus:shadow-lg"
+      >
+        Skip to main content
+      </a>
+
       {/* Mobile Header */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-dark-850 border-b border-dark-600">
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-dark-850 border-b border-dark-600"
+        role="banner"
+      >
         <div className="flex items-center justify-between px-4 py-3">
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -103,21 +113,27 @@ export default function Layout({ children }: LayoutProps) {
           lg:translate-x-0
           ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
+        role="navigation"
+        aria-label="Main navigation"
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="hidden lg:flex items-center gap-3 px-4 py-5 border-b border-dark-600">
-            <div className="w-10 h-10 rounded bg-accent-primary flex items-center justify-center text-xl">
+            <div className="w-10 h-10 rounded bg-accent-primary flex items-center justify-center text-xl"
+              aria-hidden="true"
+            >
               🚀
             </div>
             <div>
               <h1 className="font-bold text-lg text-white">DevOrbit</h1>
-              <p className="text-xs text-light-500">Track your journey</p>
+              <p className="text-xs text-light-400">Track your journey</p>
             </div>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-3 py-4 mt-14 lg:mt-0">
+          <nav className="flex-1 px-3 py-4 mt-14 lg:mt-0"
+            aria-label="Primary navigation"
+          >
             <ul className="space-y-1">
               {navItems.map(item => (
                 <li key={item.to}>
@@ -139,10 +155,10 @@ export default function Layout({ children }: LayoutProps) {
             </ul>
           </nav>
 
-          {/* Timer Widget (Desktop only) */}
-          <div className="hidden lg:block px-3 pb-4">
+          {/* Timer Widget (Desktop only) - TODO: Uncomment when backend is implemented */}
+          {/* <div className="hidden lg:block px-3 pb-4">
             <TimerWidget />
-          </div>
+          </div> */}
 
           {/* Footer Actions */}
           <div className="px-3 py-4 border-t border-dark-600 space-y-2">
@@ -196,11 +212,15 @@ export default function Layout({ children }: LayoutProps) {
       </aside>
 
       {/* Main Content */}
-      <main className="lg:ml-64 min-h-screen pt-16 lg:pt-0">
-        {/* Mobile Timer */}
-        <div className="lg:hidden px-4 py-3 border-b border-dark-600 bg-dark-850">
+      <main
+        id="main-content"
+        className="lg:ml-64 min-h-screen pt-16 lg:pt-0"
+        role="main"
+      >
+        {/* Mobile Timer - TODO: Uncomment when backend is implemented */}
+        {/* <div className="lg:hidden px-4 py-3 border-b border-dark-600 bg-dark-850">
           <TimerWidget />
-        </div>
+        </div> */}
 
         <div className="p-4 lg:p-8">{children}</div>
       </main>

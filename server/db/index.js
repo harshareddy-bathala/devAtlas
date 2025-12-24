@@ -47,6 +47,8 @@ module.exports = {
   
   // Data Management
   clearAllData: dataManagement.clearAllData,
+  exportData: dataManagement.exportData,
+  importData: dataManagement.importData,
   
   // Utilities (exposed for testing)
   utils: {

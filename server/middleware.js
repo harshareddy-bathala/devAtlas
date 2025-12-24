@@ -168,36 +168,30 @@ function requestLogger(req, res, next) {
 }
 
 // Deep sanitize input - recursively processes nested objects and arrays
-// URL fields are excluded from sanitization to preserve valid URLs
-const URL_FIELD_NAMES = ['url', 'githubUrl', 'demoUrl', 'avatarUrl', 'photoURL', 'imageUrl', 'href', 'link'];
-
-function sanitizeValue(value, depth = 0, fieldName = '') {
+function sanitizeValue(value, depth = 0) {
   // Prevent infinite recursion
   if (depth > 10) return value;
   
   if (typeof value === 'string') {
-    // Don't sanitize URL fields - they need slashes and special characters intact
-    if (URL_FIELD_NAMES.includes(fieldName)) {
-      return value;
-    }
-    
-    // For non-URL strings, escape HTML characters but NOT slashes
-    // Slashes are safe in JSON and don't pose XSS risk
     return value
       .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#x27;')
+      .replace(/\//g, '&#x2F;');
   }
   
   if (Array.isArray(value)) {
-    return value.map(item => sanitizeValue(item, depth + 1, fieldName));
+    return value.map(item => sanitizeValue(item, depth + 1));
   }
   
   if (value !== null && typeof value === 'object') {
     const sanitized = {};
     for (const key in value) {
       if (Object.prototype.hasOwnProperty.call(value, key)) {
-        // Pass the field name to check for URL fields
-        sanitized[key] = sanitizeValue(value[key], depth + 1, key);
+        // Also sanitize object keys
+        const sanitizedKey = typeof key === 'string' ? sanitizeValue(key, depth + 1) : key;
+        sanitized[sanitizedKey] = sanitizeValue(value[key], depth + 1);
       }
     }
     return sanitized;

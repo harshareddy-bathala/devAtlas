@@ -1,7 +1,10 @@
-/* Import Design System */
+/* Import Design System - Must come first */
+@import './styles/typography.css';
 @import './styles/design-tokens.css';
 @import './styles/component-library.css';
+@import './styles/accessibility.css';
 
+/* Tailwind Directives */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -55,16 +58,19 @@
   ::-webkit-scrollbar-thumb:hover {
     @apply bg-dark-500;
   }
+}
 
-  /* Focus styles - accent color */
-  :focus-visible {
-    @apply outline-none ring-2 ring-accent-primary/50 ring-offset-2 ring-offset-dark-900;
-  }
+/* Focus styles - accent color */
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #0A0A0B, 0 0 0 4px #8B5CF6;
+  border-radius: 0.375rem;
+}
 
-  /* Selection */
-  ::selection {
-    @apply bg-accent-primary/20 text-accent-primary;
-  }
+/* Selection */
+::selection {
+  background-color: rgba(139, 92, 246, 0.2);
+  color: #8B5CF6;
 }
 
 @layer utilities {

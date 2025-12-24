@@ -2,16 +2,6 @@ import { auth } from '../lib/firebase';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
 
-// Warn if API_URL doesn't include /v1
-if (import.meta.env.DEV && API_BASE && !API_BASE.endsWith('/v1')) {
-  console.warn(
-    '⚠️ VITE_API_URL should end with /v1\n' +
-    `   Current: ${API_BASE}\n` +
-    '   Expected: http://localhost:3001/api/v1\n' +
-    '   Update your client/.env file to fix API 404 errors.'
-  );
-}
-
 class ApiError extends Error {
   constructor(message, code, details = null, retryable = false) {
     super(message);
@@ -407,6 +397,24 @@ const api = {
     return fetchWithAuth('/activities', {
       method: 'POST',
       body: JSON.stringify(data)
+    });
+  },
+
+  // Export/Import (kept for backward compatibility but deprecated)
+  async exportData() {
+    return fetchWithAuth('/export');
+  },
+
+  async importData(data) {
+    return fetchWithAuth('/import', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  async clearAllData() {
+    return fetchWithAuth('/data', {
+      method: 'DELETE'
     });
   },
   
