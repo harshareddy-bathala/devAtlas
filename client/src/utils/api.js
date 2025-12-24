@@ -304,6 +304,14 @@ const api = {
     });
   },
 
+  // Batch update skills - reduces multiple writes to a single API call
+  async batchUpdateSkills(updates) {
+    return fetchWithAuth('/skills/batch', {
+      method: 'POST',
+      body: JSON.stringify({ updates })
+    });
+  },
+
   // Projects
   async getProjects(params = {}) {
     const queryParams = new URLSearchParams();
@@ -351,6 +359,14 @@ const api = {
     });
   },
 
+  // Batch update projects - reduces multiple writes to a single API call
+  async batchUpdateProjects(updates) {
+    return fetchWithAuth('/projects/batch', {
+      method: 'POST',
+      body: JSON.stringify({ updates })
+    });
+  },
+
   // Resources
   async getResources(params = {}) {
     const queryParams = new URLSearchParams();
@@ -381,6 +397,14 @@ const api = {
   async deleteResource(id) {
     return fetchWithAuth(`/resources/${id}`, {
       method: 'DELETE'
+    });
+  },
+
+  // Batch update resources - reduces multiple writes to a single API call
+  async batchUpdateResources(updates) {
+    return fetchWithAuth('/resources/batch', {
+      method: 'POST',
+      body: JSON.stringify({ updates })
     });
   },
 

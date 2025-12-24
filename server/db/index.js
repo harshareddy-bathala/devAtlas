@@ -20,6 +20,7 @@ module.exports = {
   createSkill: skills.createSkill,
   updateSkill: skills.updateSkill,
   deleteSkill: skills.deleteSkill,
+  batchUpdateSkills: skills.batchUpdateSkills,
   
   // Projects
   getAllProjects: projects.getAllProjects,
@@ -27,6 +28,7 @@ module.exports = {
   createProject: projects.createProject,
   updateProject: projects.updateProject,
   deleteProject: projects.deleteProject,
+  batchUpdateProjects: projects.batchUpdateProjects,
   
   // Resources
   getAllResources: resources.getAllResources,
@@ -34,6 +36,7 @@ module.exports = {
   createResource: resources.createResource,
   updateResource: resources.updateResource,
   deleteResource: resources.deleteResource,
+  batchUpdateResources: resources.batchUpdateResources,
   
   // Activities
   getAllActivities: activities.getAllActivities,

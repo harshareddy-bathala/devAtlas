@@ -12,6 +12,9 @@ export type {
 // Re-export useVirtualization hook
 export { useVirtualization, estimateItemHeight } from './useVirtualization';
 
+// Re-export useServiceWorker hook
+export { useServiceWorker } from './useServiceWorker';
+
 // Hook for debouncing values
 export function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);

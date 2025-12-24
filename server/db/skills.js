@@ -129,6 +129,75 @@ async function verifySkillIds(userId, skillIds) {
   return validIds;
 }
 
+/**
+ * Batch update multiple skills in a single transaction
+ * This significantly reduces Firestore write operations
+ * 
+ * @param {string} userId - User ID
+ * @param {Array<{id: string, data: Object}>} updates - Array of updates
+ * @returns {Object} - Result with updated items and any errors
+ */
+async function batchUpdateSkills(userId, updates) {
+  if (!updates || updates.length === 0) {
+    return { updated: [], errors: [] };
+  }
+
+  const { getDb } = require('../firebase');
+  const db = getDb();
+  const batch = db.batch();
+  const skillsRef = getUserCollection(userId, 'skills');
+  
+  const updated = [];
+  const errors = [];
+  const milestonesToLog = [];
+
+  // First, verify all documents exist and prepare batch
+  for (const { id, data } of updates.slice(0, 50)) { // Limit to 50
+    try {
+      const skillRef = skillsRef.doc(id);
+      const skillDoc = await skillRef.get();
+      
+      if (!skillDoc.exists) {
+        errors.push({ id, error: 'Skill not found' });
+        continue;
+      }
+
+      const oldData = skillDoc.data();
+      const updateData = {
+        ...data,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      };
+      
+      // Remove undefined values
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key] === undefined) delete updateData[key];
+      });
+
+      batch.update(skillRef, updateData);
+      updated.push({ id, ...oldData, ...updateData });
+
+      // Track milestone achievements
+      if (oldData.status !== data.status && data.status === 'mastered') {
+        milestonesToLog.push({ name: data.name || oldData.name });
+      }
+    } catch (e) {
+      errors.push({ id, error: e.message });
+    }
+  }
+
+  // Commit the batch
+  if (updated.length > 0) {
+    await batch.commit();
+
+    // Log milestones after successful batch commit
+    for (const milestone of milestonesToLog) {
+      await logActivity(userId, 'milestone', `Mastered: ${milestone.name}`);
+    }
+  }
+
+  return { updated, errors };
+}
+
 module.exports = {
   getAllSkills,
   getPaginatedSkills,
@@ -136,5 +205,6 @@ module.exports = {
   updateSkill,
   deleteSkill,
   verifySkillIds,
+  batchUpdateSkills,
   SKILL_STATUS_ORDER
 };

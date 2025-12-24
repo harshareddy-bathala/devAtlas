@@ -133,6 +133,82 @@ async function verifyProjectIds(userId, projectIds) {
   return validIds;
 }
 
+/**
+ * Batch update multiple projects in a single transaction
+ * This significantly reduces Firestore write operations
+ * 
+ * @param {string} userId - User ID
+ * @param {Array<{id: string, data: Object}>} updates - Array of updates
+ * @returns {Object} - Result with updated items and any errors
+ */
+async function batchUpdateProjects(userId, updates) {
+  if (!updates || updates.length === 0) {
+    return { updated: [], errors: [] };
+  }
+
+  const { getDb } = require('../firebase');
+  const db = getDb();
+  const batch = db.batch();
+  const projectsRef = getUserCollection(userId, 'projects');
+  
+  const updated = [];
+  const errors = [];
+  const milestonesToLog = [];
+
+  // First, verify all documents exist and prepare batch
+  for (const { id, data } of updates.slice(0, 50)) { // Limit to 50
+    try {
+      const projectRef = projectsRef.doc(id);
+      const projectDoc = await projectRef.get();
+      
+      if (!projectDoc.exists) {
+        errors.push({ id, error: 'Project not found' });
+        continue;
+      }
+
+      const oldData = projectDoc.data();
+      const updateData = {
+        ...data,
+        // Handle both camelCase and snake_case field names
+        github_url: data.githubUrl || data.github_url || oldData.github_url,
+        demo_url: data.demoUrl || data.demo_url || oldData.demo_url,
+        tech_stack: data.techStack || data.tech_stack || oldData.tech_stack,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      };
+      
+      // Remove undefined values and camelCase versions
+      delete updateData.githubUrl;
+      delete updateData.demoUrl;
+      delete updateData.techStack;
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key] === undefined) delete updateData[key];
+      });
+
+      batch.update(projectRef, updateData);
+      updated.push({ id, ...oldData, ...updateData });
+
+      // Track milestone achievements
+      if (oldData.status !== data.status && data.status === 'completed') {
+        milestonesToLog.push({ name: data.name || oldData.name });
+      }
+    } catch (e) {
+      errors.push({ id, error: e.message });
+    }
+  }
+
+  // Commit the batch
+  if (updated.length > 0) {
+    await batch.commit();
+
+    // Log milestones after successful batch commit
+    for (const milestone of milestonesToLog) {
+      await logActivity(userId, 'milestone', `Completed project: ${milestone.name}`);
+    }
+  }
+
+  return { updated, errors };
+}
+
 module.exports = {
   getAllProjects,
   getPaginatedProjects,
@@ -140,5 +216,6 @@ module.exports = {
   updateProject,
   deleteProject,
   verifyProjectIds,
+  batchUpdateProjects,
   PROJECT_STATUS_ORDER
 };

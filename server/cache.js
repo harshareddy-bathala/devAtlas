@@ -120,12 +120,21 @@ async function getCached(key, fetchFn, ttl = 300) {
     // Try to get from cache
     const cached = await redis.get(key);
     
-    if (cached) {
-      try {
-        return JSON.parse(cached);
-      } catch (parseError) {
-        // Invalid JSON in cache, fetch fresh
-        console.warn(`Invalid cache data for key ${key}, fetching fresh`);
+    if (cached !== null && cached !== undefined) {
+      // Upstash auto-parses JSON, ioredis returns string
+      // Check if we need to parse or if it's already an object
+      if (typeof cached === 'object') {
+        // Upstash already parsed it for us
+        return cached;
+      }
+      
+      if (typeof cached === 'string') {
+        try {
+          return JSON.parse(cached);
+        } catch (parseError) {
+          // Invalid JSON in cache, fetch fresh
+          console.warn(`Invalid cache data for key ${key}, fetching fresh`);
+        }
       }
     }
 
@@ -136,6 +145,7 @@ async function getCached(key, fetchFn, ttl = 300) {
     // Upstash uses set() with ex option, ioredis uses setex()
     try {
       if (isUpstash) {
+        // Store as JSON string for consistency
         await redis.set(key, JSON.stringify(data), { ex: ttl });
       } else {
         redis.setex(key, ttl, JSON.stringify(data)).catch((err) => {

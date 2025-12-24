@@ -8,7 +8,7 @@ const { initializeFirebase, verifyIdToken, getOrCreateUser, getAuth, getDb, admi
 const db = require('./db'); // Use new modular database layer
 const { getCached, invalidateCache, invalidateUserCache, isCacheAvailable } = require('./cache');
 const { initSentry, setSentryUser, captureException, addBreadcrumb } = require('./sentry');
-const { skillSchema, projectSchema, resourceSchema, activitySchema, idParamSchema, profileSchema, paginationSchema } = require('./validation');
+const { skillSchema, projectSchema, resourceSchema, activitySchema, idParamSchema, profileSchema, paginationSchema, batchSkillUpdateSchema, batchProjectUpdateSchema, batchResourceUpdateSchema } = require('./validation');
 const { validate, validateParams, validateQuery, asyncHandler, errorHandler, requestLogger, sanitize, requestIdMiddleware } = require('./middleware');
 const { NotFoundError, UnauthorizedError, ValidationError } = require('./errors');
 
@@ -448,6 +448,24 @@ app.delete('/api/v1/skills/:id', authMiddleware, validateParams(idParamSchema), 
   res.json({ success: true, message: 'Skill deleted successfully' });
 }));
 
+// Batch update skills - reduces multiple writes to a single batch operation
+app.post('/api/v1/skills/batch', authMiddleware, validate(batchSkillUpdateSchema), asyncHandler(async (req, res) => {
+  const { updates } = req.body;
+  const result = await db.batchUpdateSkills(req.user.id, updates);
+  
+  // Invalidate cache after batch update
+  await invalidateCache(`skills:${req.user.id}`);
+  await invalidateCache(`stats:${req.user.id}`);
+  
+  res.json({ 
+    success: true, 
+    data: {
+      updated: result.updated.length,
+      errors: result.errors
+    }
+  });
+}));
+
 // ============ PROJECTS ROUTES ============
 app.get('/api/v1/projects', authMiddleware, asyncHandler(async (req, res) => {
   const userId = req.user.id;
@@ -498,6 +516,24 @@ app.delete('/api/v1/projects/:id', authMiddleware, validateParams(idParamSchema)
   res.json({ success: true, message: 'Project deleted successfully' });
 }));
 
+// Batch update projects - reduces multiple writes to a single batch operation
+app.post('/api/v1/projects/batch', authMiddleware, validate(batchProjectUpdateSchema), asyncHandler(async (req, res) => {
+  const { updates } = req.body;
+  const result = await db.batchUpdateProjects(req.user.id, updates);
+  
+  // Invalidate cache after batch update
+  await invalidateCache(`projects:${req.user.id}`);
+  await invalidateCache(`stats:${req.user.id}`);
+  
+  res.json({ 
+    success: true, 
+    data: {
+      updated: result.updated.length,
+      errors: result.errors
+    }
+  });
+}));
+
 // ============ RESOURCES ROUTES ============
 app.get('/api/v1/resources', authMiddleware, asyncHandler(async (req, res) => {
   const userId = req.user.id;
@@ -545,6 +581,24 @@ app.delete('/api/v1/resources/:id', authMiddleware, validateParams(idParamSchema
   await invalidateCache(`resources:${req.user.id}`);
   await invalidateCache(`stats:${req.user.id}`);
   res.json({ success: true, message: 'Resource deleted successfully' });
+}));
+
+// Batch update resources - reduces multiple writes to a single batch operation
+app.post('/api/v1/resources/batch', authMiddleware, validate(batchResourceUpdateSchema), asyncHandler(async (req, res) => {
+  const { updates } = req.body;
+  const result = await db.batchUpdateResources(req.user.id, updates);
+  
+  // Invalidate cache after batch update
+  await invalidateCache(`resources:${req.user.id}`);
+  await invalidateCache(`stats:${req.user.id}`);
+  
+  res.json({ 
+    success: true, 
+    data: {
+      updated: result.updated.length,
+      errors: result.errors
+    }
+  });
 }));
 
 // ============ ACTIVITIES ROUTES ============

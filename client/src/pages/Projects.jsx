@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
-import { Plus, Edit2, Trash2, Github, ExternalLink, Lightbulb, Rocket, CheckCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, Github, ExternalLink, Lightbulb, Rocket, CheckCircle, Cloud } from 'lucide-react';
 import api from '../utils/api';
 import { PageLoader, LoadingButton } from '../components/LoadingStates';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -41,6 +41,33 @@ const STATUS_CONFIG = {
   }
 };
 
+// Debounce delay for batching status changes (ms)
+const DEBOUNCE_DELAY = 2000;
+
+// Cache key for localStorage
+const PROJECTS_CACHE_KEY = 'devOrbit_projects_cache';
+
+// Helper to load from localStorage
+function loadFromCache(key) {
+  try {
+    const stored = localStorage.getItem(key);
+    if (!stored) return null;
+    const { data, timestamp } = JSON.parse(stored);
+    return { data, isStale: Date.now() - timestamp > 5 * 60 * 1000 };
+  } catch {
+    return null;
+  }
+}
+
+// Helper to save to localStorage
+function saveToCache(key, data) {
+  try {
+    localStorage.setItem(key, JSON.stringify({ data, timestamp: Date.now() }));
+  } catch (e) {
+    console.warn('Failed to save cache:', e);
+  }
+}
+
 function Projects() {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -53,6 +80,11 @@ function Projects() {
   const [usePagination, setUsePagination] = useState(false);
   const dataFetched = useRef(false);
   const ITEMS_PER_PAGE = 12;
+  
+  // Pending changes tracking for debounced batch updates
+  const pendingChangesRef = useRef(new Map());
+  const debounceTimerRef = useRef(null);
+  const [hasPendingSync, setHasPendingSync] = useState(false);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm({
     resolver: zodResolver(projectFormSchema),
@@ -68,6 +100,15 @@ function Projects() {
 
   const loadProjects = useCallback(async (page = 1) => {
     try {
+      // Load from cache first for instant UI
+      const cached = loadFromCache(PROJECTS_CACHE_KEY);
+      if (cached?.data && !usePagination) {
+        setProjects(cached.data);
+        setLoading(false);
+        // If cache is fresh, skip network fetch
+        if (!cached.isStale) return;
+      }
+      
       // Use pagination for large datasets
       if (usePagination) {
         const response = await api.getProjects({ page, limit: ITEMS_PER_PAGE });
@@ -83,6 +124,9 @@ function Projects() {
         const data = await api.getProjects();
         const projectList = Array.isArray(data) ? data : (data.items || []);
         setProjects(projectList);
+        
+        // Update cache
+        saveToCache(PROJECTS_CACHE_KEY, projectList);
         
         // Enable pagination if we have many projects
         if (projectList.length > 50) {
@@ -101,6 +145,73 @@ function Projects() {
     dataFetched.current = true;
     loadProjects(currentPage);
   }, [loadProjects, currentPage]);
+
+  // Sync pending changes when user leaves page or tab becomes hidden
+  useEffect(() => {
+    const syncPendingChanges = async () => {
+      if (pendingChangesRef.current.size === 0) return;
+      
+      const updates = Array.from(pendingChangesRef.current.entries()).map(([id, data]) => ({
+        id,
+        data
+      }));
+      
+      try {
+        await api.batchUpdateProjects(updates);
+        pendingChangesRef.current.clear();
+        setHasPendingSync(false);
+        saveToCache(PROJECTS_CACHE_KEY, projects);
+      } catch (error) {
+        console.error('Failed to sync pending changes:', error);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        syncPendingChanges();
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      syncPendingChanges();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      syncPendingChanges();
+    };
+  }, [projects]);
+
+  // Debounced batch sync function
+  const scheduleBatchSync = useCallback(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    
+    debounceTimerRef.current = setTimeout(async () => {
+      if (pendingChangesRef.current.size === 0) return;
+      
+      const updates = Array.from(pendingChangesRef.current.entries()).map(([id, data]) => ({
+        id,
+        data
+      }));
+      
+      try {
+        await api.batchUpdateProjects(updates);
+        pendingChangesRef.current.clear();
+        setHasPendingSync(false);
+        toast.success(`Synced ${updates.length} change${updates.length > 1 ? 's' : ''}`);
+        saveToCache(PROJECTS_CACHE_KEY, projects);
+      } catch (error) {
+        console.error('Batch sync failed:', error);
+        toast.error('Failed to sync changes. Will retry...');
+      }
+    }, DEBOUNCE_DELAY);
+  }, [projects]);
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -197,28 +308,30 @@ function Projects() {
       }
     }
     
-    // Optimistic update - update UI immediately
-    const previousProjects = [...projects];
-    setProjects(projects.map(p => 
-      p.id === project.id ? { ...p, status: newStatus } : p
-    ));
+    // Optimistic update - update UI immediately (no waiting!)
+    setProjects(prevProjects => {
+      const updated = prevProjects.map(p => 
+        p.id === project.id ? { ...p, status: newStatus } : p
+      );
+      // Update cache immediately for persistence
+      saveToCache(PROJECTS_CACHE_KEY, updated);
+      return updated;
+    });
     
-    try {
-      // Sync with server in background
-      await api.updateProject(project.id, { 
-        name: project.name,
-        description: project.description,
-        status: newStatus,
-        githubUrl: project.github_url,
-        demoUrl: project.demo_url,
-        techStack: project.tech_stack
-      });
-      toast.success(`Moved to ${STATUS_CONFIG[newStatus].label}`);
-    } catch (error) {
-      // Rollback on error
-      setProjects(previousProjects);
-      toast.error(error.message || 'Failed to update project status');
-    }
+    // Queue the change for batch sync (debounced)
+    pendingChangesRef.current.set(project.id, { 
+      name: project.name,
+      description: project.description,
+      status: newStatus,
+      githubUrl: project.github_url,
+      demoUrl: project.demo_url,
+      techStack: project.tech_stack
+    });
+    
+    setHasPendingSync(true);
+    
+    // Schedule batch sync (will debounce multiple rapid changes)
+    scheduleBatchSync();
   };
 
   const groupedProjects = {
@@ -243,10 +356,19 @@ function Projects() {
           <h1 className="text-3xl font-bold mb-2 text-white">Projects</h1>
           <p className="text-light-500">From idea to deployment - track your builds</p>
         </div>
-        <button onClick={() => openModal()} className="btn-primary flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          New Project
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Sync status indicator */}
+          {hasPendingSync && (
+            <div className="flex items-center gap-2 text-sm text-light-500 bg-dark-700 px-3 py-1.5 rounded">
+              <Cloud className="w-4 h-4 animate-pulse text-accent-primary" />
+              <span>Syncing...</span>
+            </div>
+          )}
+          <button onClick={() => openModal()} className="btn-primary flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            New Project
+          </button>
+        </div>
       </div>
 
       {/* Kanban-style columns */}

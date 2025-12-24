@@ -174,6 +174,61 @@ const importActivitySchema = z.object({
   lastActivity: z.string().max(1000).optional().default('')
 }).strip();
 
+// ============ BATCH UPDATE SCHEMAS ============
+// For efficient bulk operations that reduce Firestore writes
+
+// Partial skill update (for batch updates - allows partial data)
+const skillUpdateSchema = z.object({
+  name: z.string().min(1).max(100).trim().optional(),
+  category: z.enum(['language', 'framework', 'library', 'tool', 'database', 'runtime', 'other']).optional(),
+  status: z.enum(['want_to_learn', 'learning', 'mastered']).optional(),
+  icon: z.string().max(50).optional(),
+  linkedProjects: arrayOrObjectToArray
+}).strict();
+
+// Partial project update (for batch updates)
+const projectUpdateSchema = z.object({
+  name: z.string().min(1).max(200).trim().optional(),
+  description: z.string().max(2000).optional(),
+  status: z.enum(['idea', 'active', 'completed']).optional(),
+  githubUrl: z.string().url().optional().or(z.literal('')),
+  demoUrl: z.string().url().optional().or(z.literal('')),
+  techStack: z.string().max(500).optional(),
+  linkedSkills: arrayOrObjectToArray
+}).strict();
+
+// Partial resource update (for batch updates)
+const resourceUpdateSchema = z.object({
+  title: z.string().min(1).max(300).trim().optional(),
+  url: z.string().url().max(2000).optional(),
+  type: z.enum(['documentation', 'video', 'course', 'article', 'tutorial', 'other']).optional(),
+  skillId: z.union([z.string(), z.null()]).optional(),
+  projectId: z.union([z.string(), z.null()]).optional(),
+  notes: z.string().max(5000).optional()
+}).strict();
+
+// Batch update schema - array of updates with IDs
+const batchSkillUpdateSchema = z.object({
+  updates: z.array(z.object({
+    id: z.string().min(1).max(100),
+    data: skillUpdateSchema
+  })).min(1).max(50) // Max 50 items per batch to prevent abuse
+});
+
+const batchProjectUpdateSchema = z.object({
+  updates: z.array(z.object({
+    id: z.string().min(1).max(100),
+    data: projectUpdateSchema
+  })).min(1).max(50)
+});
+
+const batchResourceUpdateSchema = z.object({
+  updates: z.array(z.object({
+    id: z.string().min(1).max(100),
+    data: resourceUpdateSchema
+  })).min(1).max(50)
+});
+
 // Full import data schema
 const importDataSchema = z.object({
   skills: z.array(importSkillSchema).optional().default([]),
@@ -199,6 +254,14 @@ module.exports = {
   idParamSchema,
   profileSchema,
   paginationSchema,
+  // Partial update schemas (for batch operations)
+  skillUpdateSchema,
+  projectUpdateSchema,
+  resourceUpdateSchema,
+  // Batch update schemas
+  batchSkillUpdateSchema,
+  batchProjectUpdateSchema,
+  batchResourceUpdateSchema,
   // Import schemas
   importDataSchema,
   importSkillSchema,

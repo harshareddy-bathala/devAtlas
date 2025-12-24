@@ -152,10 +152,69 @@ async function deleteResource(userId, resourceId) {
   return true;
 }
 
+/**
+ * Batch update multiple resources in a single transaction
+ * This significantly reduces Firestore write operations
+ * 
+ * @param {string} userId - User ID
+ * @param {Array<{id: string, data: Object}>} updates - Array of updates
+ * @returns {Object} - Result with updated items and any errors
+ */
+async function batchUpdateResources(userId, updates) {
+  if (!updates || updates.length === 0) {
+    return { updated: [], errors: [] };
+  }
+
+  const { getDb } = require('../firebase');
+  const db = getDb();
+  const batch = db.batch();
+  const resourcesRef = getUserCollection(userId, 'resources');
+  
+  const updated = [];
+  const errors = [];
+
+  // First, verify all documents exist and prepare batch
+  for (const { id, data } of updates.slice(0, 50)) { // Limit to 50
+    try {
+      const resourceRef = resourcesRef.doc(id);
+      const resourceDoc = await resourceRef.get();
+      
+      if (!resourceDoc.exists) {
+        errors.push({ id, error: 'Resource not found' });
+        continue;
+      }
+
+      const oldData = resourceDoc.data();
+      const updateData = {
+        ...data,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      };
+      
+      // Remove undefined values
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key] === undefined) delete updateData[key];
+      });
+
+      batch.update(resourceRef, updateData);
+      updated.push({ id, ...oldData, ...updateData });
+    } catch (e) {
+      errors.push({ id, error: e.message });
+    }
+  }
+
+  // Commit the batch
+  if (updated.length > 0) {
+    await batch.commit();
+  }
+
+  return { updated, errors };
+}
+
 module.exports = {
   getAllResources,
   getPaginatedResources,
   createResource,
   updateResource,
-  deleteResource
+  deleteResource,
+  batchUpdateResources
 };

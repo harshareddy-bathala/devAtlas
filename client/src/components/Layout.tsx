@@ -13,6 +13,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import { SyncStatusBar } from './SyncStatusBar';
 // import TimerWidget from './TimerWidget'; // TODO: Uncomment when backend is implemented
 import toast from 'react-hot-toast';
 
@@ -223,6 +224,9 @@ export default function Layout({ children }: LayoutProps) {
         </div> */}
 
         <div className="p-4 lg:p-8">{children}</div>
+        
+        {/* Sync Status Indicator */}
+        <SyncStatusBar />
       </main>
     </div>
   );
