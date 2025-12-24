@@ -168,11 +168,18 @@ function requestLogger(req, res, next) {
 }
 
 // Deep sanitize input - recursively processes nested objects and arrays
-function sanitizeValue(value, depth = 0) {
+function sanitizeValue(value, depth = 0, fieldName = '') {
   // Prevent infinite recursion
   if (depth > 10) return value;
   
   if (typeof value === 'string') {
+    // Don't sanitize URLs - they need forward slashes and other characters
+    if (fieldName === 'url' || fieldName === 'githubUrl' || fieldName === 'demoUrl' || 
+        fieldName === 'github_url' || fieldName === 'demo_url' ||
+        value.startsWith('http://') || value.startsWith('https://')) {
+      return value.trim();
+    }
+    
     return value
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
@@ -182,16 +189,15 @@ function sanitizeValue(value, depth = 0) {
   }
   
   if (Array.isArray(value)) {
-    return value.map(item => sanitizeValue(item, depth + 1));
+    return value.map(item => sanitizeValue(item, depth + 1, fieldName));
   }
   
   if (value !== null && typeof value === 'object') {
     const sanitized = {};
     for (const key in value) {
       if (Object.prototype.hasOwnProperty.call(value, key)) {
-        // Also sanitize object keys
-        const sanitizedKey = typeof key === 'string' ? sanitizeValue(key, depth + 1) : key;
-        sanitized[sanitizedKey] = sanitizeValue(value[key], depth + 1);
+        // Pass field name down for URL detection
+        sanitized[key] = sanitizeValue(value[key], depth + 1, key);
       }
     }
     return sanitized;

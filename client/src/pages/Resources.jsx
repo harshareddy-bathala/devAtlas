@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
-import { Plus, Edit2, Trash2, ExternalLink, FileText, Video, BookOpen, Code, Link as LinkIcon, LayoutGrid, List } from 'lucide-react';
+import { Plus, Edit2, Trash2, ExternalLink, FileText, Video, BookOpen, Code, Link as LinkIcon, LayoutGrid, List, Cloud } from 'lucide-react';
 import api from '../utils/api';
 import { PageLoader, LoadingButton } from '../components/LoadingStates';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -28,6 +28,37 @@ const TYPE_CONFIG = {
   tutorial: { label: 'Tutorial', icon: Code, color: 'text-[#22C55E]' },
   other: { label: 'Other', icon: LinkIcon, color: 'text-light-400' }
 };
+
+// Debounce delay for batching updates (ms)
+const DEBOUNCE_DELAY = 2000;
+
+// Cache keys for localStorage
+const CACHE_KEYS = {
+  resources: 'devOrbit_resources_cache',
+  skills: 'devOrbit_skills_cache',
+  projects: 'devOrbit_projects_cache',
+};
+
+// Helper to load from localStorage
+function loadFromCache(key) {
+  try {
+    const stored = localStorage.getItem(key);
+    if (!stored) return null;
+    const { data, timestamp } = JSON.parse(stored);
+    return { data, isStale: Date.now() - timestamp > 5 * 60 * 1000 };
+  } catch {
+    return null;
+  }
+}
+
+// Helper to save to localStorage
+function saveToCache(key, data) {
+  try {
+    localStorage.setItem(key, JSON.stringify({ data, timestamp: Date.now() }));
+  } catch (e) {
+    console.warn('Failed to save cache:', e);
+  }
+}
 
 // Resource Card Component (for grid view)
 function ResourceCard({ resource, onEdit, onDelete, getDomain }) {
@@ -168,6 +199,11 @@ function Resources() {
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, resource: null });
   const dataFetched = useRef(false);
+  
+  // Pending changes tracking for debounced batch updates
+  const pendingChangesRef = useRef(new Map());
+  const debounceTimerRef = useRef(null);
+  const [hasPendingSync, setHasPendingSync] = useState(false);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm({
     resolver: zodResolver(resourceFormSchema),
@@ -183,14 +219,33 @@ function Resources() {
 
   const loadData = useCallback(async () => {
     try {
+      // Load from cache first for instant UI
+      const cachedResources = loadFromCache(CACHE_KEYS.resources);
+      const cachedSkills = loadFromCache(CACHE_KEYS.skills);
+      const cachedProjects = loadFromCache(CACHE_KEYS.projects);
+      
+      if (cachedResources?.data) {
+        setResources(cachedResources.data);
+        setLoading(false);
+      }
+      if (cachedSkills?.data) setSkills(cachedSkills.data);
+      if (cachedProjects?.data) setProjects(cachedProjects.data);
+      
+      // Fetch fresh data (in background if we had cache)
       const [resourcesData, skillsData, projectsData] = await Promise.all([
         api.getResources(),
         api.getSkills(),
         api.getProjects()
       ]);
+      
       setResources(resourcesData);
       setSkills(skillsData);
       setProjects(projectsData);
+      
+      // Update cache
+      saveToCache(CACHE_KEYS.resources, resourcesData);
+      saveToCache(CACHE_KEYS.skills, skillsData);
+      saveToCache(CACHE_KEYS.projects, projectsData);
     } catch (error) {
       toast.error(error.message || 'Failed to load data');
     } finally {
@@ -203,6 +258,73 @@ function Resources() {
     dataFetched.current = true;
     loadData();
   }, [loadData]);
+
+  // Sync pending changes when user leaves page or tab becomes hidden
+  useEffect(() => {
+    const syncPendingChanges = async () => {
+      if (pendingChangesRef.current.size === 0) return;
+      
+      const updates = Array.from(pendingChangesRef.current.entries()).map(([id, data]) => ({
+        id,
+        data
+      }));
+      
+      try {
+        await api.batchUpdateResources(updates);
+        pendingChangesRef.current.clear();
+        setHasPendingSync(false);
+        saveToCache(CACHE_KEYS.resources, resources);
+      } catch (error) {
+        console.error('Failed to sync pending changes:', error);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        syncPendingChanges();
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      syncPendingChanges();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      syncPendingChanges();
+    };
+  }, [resources]);
+
+  // Debounced batch sync function
+  const scheduleBatchSync = useCallback(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    
+    debounceTimerRef.current = setTimeout(async () => {
+      if (pendingChangesRef.current.size === 0) return;
+      
+      const updates = Array.from(pendingChangesRef.current.entries()).map(([id, data]) => ({
+        id,
+        data
+      }));
+      
+      try {
+        await api.batchUpdateResources(updates);
+        pendingChangesRef.current.clear();
+        setHasPendingSync(false);
+        toast.success(`Synced ${updates.length} change${updates.length > 1 ? 's' : ''}`);
+        saveToCache(CACHE_KEYS.resources, resources);
+      } catch (error) {
+        console.error('Batch sync failed:', error);
+        toast.error('Failed to sync changes. Will retry...');
+      }
+    }, DEBOUNCE_DELAY);
+  }, [resources]);
 
   const openModal = (resource = null) => {
     if (resource) {
@@ -238,11 +360,17 @@ function Resources() {
   const onSubmit = async (data) => {
     setSaving(true);
     try {
+      // Ensure URL is properly formatted (not HTML-encoded)
+      const sanitizedData = {
+        ...data,
+        url: data.url.trim(), // Just trim, don't encode
+      };
+      
       if (editingResource) {
-        await api.updateResource(editingResource.id, data);
+        await api.updateResource(editingResource.id, sanitizedData);
         toast.success('Resource updated successfully');
       } else {
-        await api.createResource(data);
+        await api.createResource(sanitizedData);
         toast.success('Resource added successfully');
       }
       loadData();
@@ -310,10 +438,19 @@ function Resources() {
           <h1 className="text-3xl font-bold mb-2 text-white">Resources</h1>
           <p className="text-light-500">Your learning library - courses, docs, and tutorials</p>
         </div>
-        <button onClick={() => openModal()} className="btn-primary flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          Add Resource
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Sync status indicator */}
+          {hasPendingSync && (
+            <div className="flex items-center gap-2 text-sm text-light-500 bg-dark-700 px-3 py-1.5 rounded">
+              <Cloud className="w-4 h-4 animate-pulse text-accent-primary" />
+              <span>Syncing...</span>
+            </div>
+          )}
+          <button onClick={() => openModal()} className="btn-primary flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            Add Resource
+          </button>
+        </div>
       </div>
 
       {/* Filter Tabs */}
