@@ -77,8 +77,8 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
     connectionQuality: navigator.onLine ? 'good' : 'offline',
   });
 
-  const healthCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const healthCheckIntervalRef = useRef<number | null>(null);
+  const retryTimeoutRef = useRef<number | null>(null);
 
   // Check backend health
   const checkConnection = useCallback(async (): Promise<boolean> => {

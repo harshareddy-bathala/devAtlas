@@ -112,7 +112,7 @@ export default function LoginPage() {
         await signIn(email, password);
         toast.success('Welcome back!');
       } else {
-        await signUp(email, password);
+        await signUp(email, password, '');
         toast.success('Account created!');
       }
     } catch (error: any) {

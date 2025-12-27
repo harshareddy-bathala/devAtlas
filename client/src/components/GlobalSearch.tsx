@@ -71,7 +71,7 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
   
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const searchTimeoutRef = useRef<number | null>(null);
 
   // Load all data when search opens
   useEffect(() => {

@@ -19,7 +19,7 @@ interface UndoableAction {
   previousData: unknown;
   entityId: string;
   timestamp: number;
-  timeout: NodeJS.Timeout;
+  timeout: number;
 }
 
 interface UndoContextValue {
