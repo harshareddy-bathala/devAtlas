@@ -70,14 +70,14 @@ export default function Landing() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link 
               to="/login?mode=signup" 
-              className="w-full sm:w-auto px-8 py-3 bg-accent-primary text-white font-medium rounded hover:bg-accent-primary-hover transition-colors flex items-center justify-center gap-2"
+              className="w-full sm:w-auto px-8 py-3 bg-accent-primary text-white font-medium rounded hover:bg-accent-primary-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary focus-visible:ring-offset-2 focus-visible:ring-offset-dark-900 transition-colors flex items-center justify-center gap-2"
             >
               Start Free
               <ArrowRight className="w-4 h-4" />
             </Link>
             <a 
               href="#features" 
-              className="w-full sm:w-auto px-8 py-3 bg-transparent text-white font-medium rounded border border-dark-500 hover:bg-dark-700 transition-colors"
+              className="w-full sm:w-auto px-8 py-3 bg-transparent text-white font-medium rounded border border-dark-500 hover:bg-dark-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-dark-900 transition-colors"
             >
               Learn More
             </a>

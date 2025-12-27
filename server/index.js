@@ -3,6 +3,8 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 const rateLimit = require('express-rate-limit');
 const { initializeFirebase, verifyIdToken, getOrCreateUser, getAuth, getDb, admin } = require('./firebase');
 const db = require('./db'); // Use new modular database layer
@@ -11,6 +13,51 @@ const { initSentry, setSentryUser, captureException, addBreadcrumb } = require('
 const { skillSchema, projectSchema, resourceSchema, activitySchema, idParamSchema, profileSchema, paginationSchema, batchSkillUpdateSchema, batchProjectUpdateSchema, batchResourceUpdateSchema } = require('./validation');
 const { validate, validateParams, validateQuery, asyncHandler, errorHandler, requestLogger, sanitize, requestIdMiddleware } = require('./middleware');
 const { NotFoundError, UnauthorizedError, ValidationError } = require('./errors');
+
+// Check if serviceAccountKey.json exists for local development
+const serviceAccountPath = path.join(__dirname, 'serviceAccountKey.json');
+const hasServiceAccountFile = fs.existsSync(serviceAccountPath);
+
+// Validate required environment variables at startup
+// FIREBASE_SERVICE_ACCOUNT is only required if serviceAccountKey.json doesn't exist
+const requiredEnvVars = [];
+
+// Only require FIREBASE_SERVICE_ACCOUNT if no local file exists
+if (!hasServiceAccountFile) {
+  requiredEnvVars.push('FIREBASE_SERVICE_ACCOUNT');
+}
+
+// CORS_ORIGIN is optional in development (defaults to localhost)
+if (process.env.NODE_ENV === 'production') {
+  requiredEnvVars.push('CORS_ORIGIN');
+}
+
+const optionalEnvVars = [
+  'PORT',
+  'NODE_ENV',
+  'REDIS_URL',
+  'UPSTASH_REDIS_REST_URL',
+  'UPSTASH_REDIS_REST_TOKEN',
+];
+
+function validateEnvironment() {
+  const missing = requiredEnvVars.filter(key => !process.env[key]);
+  
+  if (missing.length > 0) {
+    console.error('❌ Missing required environment variables:');
+    missing.forEach(key => console.error(`   - ${key}`));
+    process.exit(1);
+  }
+  
+  // Log configured services
+  console.log('📋 Environment configuration:');
+  console.log(`   NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`   PORT: ${process.env.PORT || 3001}`);
+  console.log(`   Firebase: ${process.env.FIREBASE_SERVICE_ACCOUNT ? 'env variable' : (hasServiceAccountFile ? 'local file' : 'not configured')}`);
+  console.log(`   Redis: ${process.env.REDIS_URL || process.env.UPSTASH_REDIS_REST_URL ? 'configured' : 'not configured'}`);
+}
+
+validateEnvironment();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -68,15 +115,18 @@ app.use((req, res, next) => {
         baseUri: ["'self'"],
         formAction: ["'self'"],
         objectSrc: ["'none'"],
+        mediaSrc: ["'self'"],
         upgradeInsecureRequests: isDev ? [] : undefined
       }
     },
     crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
     hsts: {
       maxAge: 31536000,
       includeSubDomains: true,
       preload: true
-    }
+    },
+    referrerPolicy: { policy: "strict-origin-when-cross-origin" }
   })(req, res, next);
 });
 
@@ -656,6 +706,164 @@ app.delete('/api/v1/data', authMiddleware, asyncHandler(async (req, res) => {
   res.json({ success: true, message: 'All data cleared successfully', ...result });
 }));
 
+// ============ GOALS ROUTES ============
+app.get('/api/v1/goals', authMiddleware, asyncHandler(async (req, res) => {
+  const goals = await db.getGoals(req.user.id);
+  res.json({ success: true, data: goals });
+}));
+
+app.get('/api/v1/goals/:id', authMiddleware, validateParams(idParamSchema), asyncHandler(async (req, res) => {
+  const goal = await db.getGoal(req.user.id, req.params.id);
+  res.json({ success: true, data: goal });
+}));
+
+app.post('/api/v1/goals', authMiddleware, asyncHandler(async (req, res) => {
+  const goal = await db.createGoal(req.user.id, req.body);
+  res.status(201).json({ success: true, data: goal });
+}));
+
+app.put('/api/v1/goals/:id', authMiddleware, validateParams(idParamSchema), asyncHandler(async (req, res) => {
+  const goal = await db.updateGoal(req.user.id, req.params.id, req.body);
+  res.json({ success: true, data: goal });
+}));
+
+app.delete('/api/v1/goals/:id', authMiddleware, validateParams(idParamSchema), asyncHandler(async (req, res) => {
+  await db.deleteGoal(req.user.id, req.params.id);
+  res.json({ success: true, message: 'Goal deleted' });
+}));
+
+app.put('/api/v1/goals/:id/milestones/:milestoneId', authMiddleware, asyncHandler(async (req, res) => {
+  const { completed } = req.body;
+  const goal = await db.updateMilestone(req.user.id, req.params.id, req.params.milestoneId, completed);
+  res.json({ success: true, data: goal });
+}));
+
+// ============ SKILL DEPENDENCIES ROUTES ============
+app.get('/api/v1/dependencies', authMiddleware, asyncHandler(async (req, res) => {
+  const dependencies = await db.getDependencies(req.user.id);
+  res.json({ success: true, data: dependencies });
+}));
+
+app.get('/api/v1/skills/:id/dependencies', authMiddleware, validateParams(idParamSchema), asyncHandler(async (req, res) => {
+  const dependencies = await db.getSkillDependencies(req.user.id, req.params.id);
+  res.json({ success: true, data: dependencies });
+}));
+
+app.put('/api/v1/skills/:id/dependencies', authMiddleware, validateParams(idParamSchema), asyncHandler(async (req, res) => {
+  const { prerequisites } = req.body;
+  const dependencies = await db.setSkillDependencies(req.user.id, req.params.id, prerequisites);
+  res.json({ success: true, data: dependencies });
+}));
+
+app.post('/api/v1/skills/:id/dependencies', authMiddleware, validateParams(idParamSchema), asyncHandler(async (req, res) => {
+  const { prerequisiteId } = req.body;
+  const dependencies = await db.addPrerequisite(req.user.id, req.params.id, prerequisiteId);
+  res.json({ success: true, data: dependencies });
+}));
+
+app.delete('/api/v1/skills/:id/dependencies/:prereqId', authMiddleware, asyncHandler(async (req, res) => {
+  const dependencies = await db.removePrerequisite(req.user.id, req.params.id, req.params.prereqId);
+  res.json({ success: true, data: dependencies });
+}));
+
+// ============ CUSTOM CATEGORIES ROUTES ============
+app.get('/api/v1/categories', authMiddleware, asyncHandler(async (req, res) => {
+  const categories = await db.getCategories(req.user.id);
+  res.json({ success: true, data: categories });
+}));
+
+app.post('/api/v1/categories', authMiddleware, asyncHandler(async (req, res) => {
+  const category = await db.createCategory(req.user.id, req.body);
+  res.status(201).json({ success: true, data: category });
+}));
+
+app.put('/api/v1/categories/:id', authMiddleware, validateParams(idParamSchema), asyncHandler(async (req, res) => {
+  const category = await db.updateCategory(req.user.id, req.params.id, req.body);
+  res.json({ success: true, data: category });
+}));
+
+app.delete('/api/v1/categories/:id', authMiddleware, validateParams(idParamSchema), asyncHandler(async (req, res) => {
+  await db.deleteCategory(req.user.id, req.params.id);
+  res.json({ success: true, message: 'Category deleted' });
+}));
+
+app.put('/api/v1/categories/reorder', authMiddleware, asyncHandler(async (req, res) => {
+  const { categoryIds } = req.body;
+  await db.reorderCategories(req.user.id, categoryIds);
+  res.json({ success: true, message: 'Categories reordered' });
+}));
+
+// ============ PUBLIC PROFILE ROUTES ============
+app.get('/api/v1/profile/public', authMiddleware, asyncHandler(async (req, res) => {
+  const profile = await db.getPublicProfile(req.user.id);
+  res.json({ success: true, data: profile });
+}));
+
+app.put('/api/v1/profile/public', authMiddleware, asyncHandler(async (req, res) => {
+  const profile = await db.updatePublicProfile(req.user.id, req.body);
+  res.json({ success: true, data: profile });
+}));
+
+// Public route - no auth required
+app.get('/api/v1/u/:slug', asyncHandler(async (req, res) => {
+  const profile = await db.getPublicProfileBySlug(req.params.slug);
+  res.json({ success: true, data: profile });
+}));
+
+// ============ STUDY GROUPS ROUTES ============
+app.get('/api/v1/study-groups', authMiddleware, asyncHandler(async (req, res) => {
+  const groups = await db.getUserStudyGroups(req.user.id);
+  res.json({ success: true, data: groups });
+}));
+
+app.get('/api/v1/study-groups/:id', authMiddleware, asyncHandler(async (req, res) => {
+  const group = await db.getStudyGroup(req.params.id, req.user.id);
+  res.json({ success: true, data: group });
+}));
+
+app.post('/api/v1/study-groups', authMiddleware, asyncHandler(async (req, res) => {
+  const group = await db.createStudyGroup(req.user.id, req.body);
+  res.status(201).json({ success: true, data: group });
+}));
+
+app.post('/api/v1/study-groups/join', authMiddleware, asyncHandler(async (req, res) => {
+  const { inviteCode } = req.body;
+  const group = await db.joinStudyGroup(req.user.id, inviteCode);
+  res.json({ success: true, data: group });
+}));
+
+app.post('/api/v1/study-groups/:id/leave', authMiddleware, asyncHandler(async (req, res) => {
+  const result = await db.leaveStudyGroup(req.user.id, req.params.id);
+  res.json({ success: true, ...result });
+}));
+
+app.delete('/api/v1/study-groups/:id', authMiddleware, asyncHandler(async (req, res) => {
+  await db.deleteStudyGroup(req.user.id, req.params.id);
+  res.json({ success: true, message: 'Study group deleted' });
+}));
+
+// ============ PROGRESS SHARING ROUTES ============
+app.get('/api/v1/shares', authMiddleware, asyncHandler(async (req, res) => {
+  const shares = await db.getUserShares(req.user.id);
+  res.json({ success: true, data: shares });
+}));
+
+app.post('/api/v1/shares', authMiddleware, asyncHandler(async (req, res) => {
+  const share = await db.createShare(req.user.id, req.body);
+  res.status(201).json({ success: true, data: share });
+}));
+
+// Public route - no auth required
+app.get('/api/v1/shared/:id', asyncHandler(async (req, res) => {
+  const share = await db.getShare(req.params.id);
+  res.json({ success: true, data: share });
+}));
+
+app.delete('/api/v1/shares/:id', authMiddleware, asyncHandler(async (req, res) => {
+  await db.revokeShare(req.user.id, req.params.id);
+  res.json({ success: true, message: 'Share revoked' });
+}));
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ 
@@ -671,8 +879,74 @@ app.use(sentryErrorHandler);
 // Global error handler
 app.use(errorHandler);
 
-app.listen(PORT, () => {
+// Track active connections for graceful shutdown
+let connections = new Set();
+let isShuttingDown = false;
+
+const server = app.listen(PORT, () => {
   console.log(`🚀 DevOrbit server running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔥 Using Firebase/Firestore`);
 });
+
+server.on('connection', (conn) => {
+  connections.add(conn);
+  conn.on('close', () => connections.delete(conn));
+});
+
+// Graceful shutdown handler
+async function gracefulShutdown(signal) {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  
+  console.log(`\n${signal} received. Starting graceful shutdown...`);
+  
+  // Stop accepting new connections
+  server.close(async () => {
+    console.log('✓ HTTP server closed');
+    
+    // Close database connections
+    try {
+      // If you have any cleanup needed for Firebase Admin SDK
+      // await admin.app().delete();
+      console.log('✓ Database connections closed');
+    } catch (error) {
+      console.error('Error closing database:', error);
+    }
+    
+    // Close Redis connection if exists
+    try {
+      // await redisClient?.quit();
+      console.log('✓ Redis connection closed');
+    } catch (error) {
+      console.error('Error closing Redis:', error);
+    }
+    
+    console.log('Graceful shutdown complete');
+    process.exit(0);
+  });
+  
+  // Force close connections after timeout
+  setTimeout(() => {
+    console.log('Force closing remaining connections...');
+    connections.forEach(conn => conn.destroy());
+    process.exit(1);
+  }, 30000);
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  captureException(error);
+  gracefulShutdown('uncaughtException');
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  captureException(reason);
+});
+
+module.exports = { app, server };

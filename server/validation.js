@@ -191,9 +191,9 @@ const projectUpdateSchema = z.object({
   name: z.string().min(1).max(200).trim().optional(),
   description: z.string().max(2000).optional(),
   status: z.enum(['idea', 'active', 'completed']).optional(),
-  githubUrl: z.string().url().optional().or(z.literal('')),
-  demoUrl: z.string().url().optional().or(z.literal('')),
-  techStack: z.string().max(500).optional(),
+  github_url: z.string().url().optional().or(z.literal('')),
+  demo_url: z.string().url().optional().or(z.literal('')),
+  tech_stack: z.string().max(500).optional(),
   linkedSkills: arrayOrObjectToArray
 }).strict();
 

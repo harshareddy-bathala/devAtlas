@@ -1,0 +1,413 @@
+/**
+ * Mobile Responsiveness CSS
+ * 
+ * Ensures proper display on devices from 320px and up
+ * Following mobile-first design principles
+ */
+
+/* ================================
+   Base Mobile Styles (320px+)
+   ================================ */
+
+/* Ensure proper viewport handling */
+html {
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+/* Touch-friendly tap targets (minimum 44x44px) */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Prevent horizontal overflow */
+body {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+/* ================================
+   Small Mobile (320px - 374px)
+   ================================ */
+@media screen and (max-width: 374px) {
+  /* Reduce padding for very small screens */
+  .p-4 {
+    padding: 0.75rem !important;
+  }
+  
+  .px-4 {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+  
+  .py-4 {
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
+  }
+  
+  /* Smaller text for compact screens */
+  .text-responsive {
+    font-size: 0.875rem;
+  }
+  
+  /* Stack elements on small screens */
+  .flex-responsive {
+    flex-direction: column !important;
+  }
+  
+  /* Full width buttons on small screens */
+  .btn-responsive {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  /* Hide less important UI elements */
+  .hide-on-small {
+    display: none !important;
+  }
+  
+  /* Reduce card padding */
+  .card-compact {
+    padding: 0.75rem;
+  }
+  
+  /* Smaller modals */
+  .modal-responsive {
+    max-width: calc(100vw - 1rem);
+    margin: 0.5rem;
+  }
+}
+
+/* ================================
+   Mobile (375px - 639px)
+   ================================ */
+@media screen and (min-width: 375px) and (max-width: 639px) {
+  /* Standard mobile spacing */
+  .p-mobile {
+    padding: 1rem;
+  }
+  
+  /* Stack grid items */
+  .grid-responsive {
+    grid-template-columns: 1fr !important;
+  }
+  
+  /* Full width inputs */
+  .input-responsive {
+    width: 100%;
+  }
+}
+
+/* ================================
+   Tablet Portrait (640px - 767px)
+   ================================ */
+@media screen and (min-width: 640px) and (max-width: 767px) {
+  /* Two-column grids */
+  .grid-responsive {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  
+  /* Show sidebar toggle */
+  .sidebar-toggle {
+    display: flex;
+  }
+}
+
+/* ================================
+   Touch Device Optimizations
+   ================================ */
+@media (hover: none) and (pointer: coarse) {
+  /* Larger touch targets */
+  button,
+  a,
+  input[type="checkbox"],
+  input[type="radio"],
+  select {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Remove hover effects that don't work on touch */
+  .hover-effect:hover {
+    background-color: inherit;
+  }
+  
+  /* Add active states for touch feedback */
+  .touch-feedback:active {
+    opacity: 0.7;
+    transform: scale(0.98);
+  }
+  
+  /* Larger dropdown menus */
+  .dropdown-item {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
+  
+  /* Disable hover tooltips, use click instead */
+  .tooltip-hover {
+    pointer-events: none;
+  }
+}
+
+/* ================================
+   Landscape Mobile
+   ================================ */
+@media screen and (max-height: 500px) and (orientation: landscape) {
+  /* Reduce header height */
+  .mobile-header {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+  
+  /* Compact sidebar */
+  .sidebar-compact {
+    width: 200px;
+  }
+  
+  /* Reduce vertical spacing */
+  .space-y-4 {
+    gap: 0.5rem !important;
+  }
+}
+
+/* ================================
+   Safe Area (for notched devices)
+   ================================ */
+@supports (padding: env(safe-area-inset-top)) {
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .safe-area-left {
+    padding-left: env(safe-area-inset-left);
+  }
+  
+  .safe-area-right {
+    padding-right: env(safe-area-inset-right);
+  }
+  
+  /* Mobile header with safe area */
+  .mobile-header-safe {
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+  }
+  
+  /* Bottom navigation with safe area */
+  .bottom-nav-safe {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+}
+
+/* ================================
+   Collapsible Sidebar for Mobile
+   ================================ */
+.sidebar-mobile-collapsed {
+  transform: translateX(-100%);
+  transition: transform 0.2s ease-in-out;
+}
+
+.sidebar-mobile-expanded {
+  transform: translateX(0);
+}
+
+/* Sidebar overlay */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 30;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.sidebar-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ================================
+   Mobile-friendly Tables
+   ================================ */
+@media screen and (max-width: 639px) {
+  /* Make tables scrollable */
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Stack table rows on mobile */
+  .table-stack thead {
+    display: none;
+  }
+  
+  .table-stack tbody tr {
+    display: block;
+    margin-bottom: 1rem;
+    border: 1px solid var(--color-dark-600);
+    border-radius: 0.5rem;
+  }
+  
+  .table-stack tbody td {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid var(--color-dark-600);
+  }
+  
+  .table-stack tbody td:last-child {
+    border-bottom: none;
+  }
+  
+  .table-stack tbody td::before {
+    content: attr(data-label);
+    font-weight: 500;
+    color: var(--color-light-400);
+  }
+}
+
+/* ================================
+   Mobile-friendly Forms
+   ================================ */
+@media screen and (max-width: 639px) {
+  /* Full-width form fields */
+  .form-field-mobile {
+    width: 100%;
+  }
+  
+  /* Stack form labels */
+  .form-group-mobile {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .form-group-mobile label {
+    margin-bottom: 0.5rem;
+  }
+  
+  /* Larger form inputs */
+  .input-mobile {
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 0.75rem 1rem;
+  }
+}
+
+/* ================================
+   Mobile-friendly Cards
+   ================================ */
+@media screen and (max-width: 639px) {
+  /* Full-width cards */
+  .card-mobile {
+    margin-left: -1rem;
+    margin-right: -1rem;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+  
+  /* Compact card headers */
+  .card-header-mobile {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  /* Stack card actions */
+  .card-actions-mobile {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+/* ================================
+   Mobile Navigation
+   ================================ */
+@media screen and (max-width: 1023px) {
+  /* Fixed bottom navigation for mobile */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: var(--color-dark-850);
+    border-top: 1px solid var(--color-dark-600);
+    display: flex;
+    justify-content: space-around;
+    padding: 0.5rem 0;
+    z-index: 40;
+  }
+  
+  .bottom-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.5rem;
+    color: var(--color-light-500);
+    font-size: 0.75rem;
+  }
+  
+  .bottom-nav-item.active {
+    color: var(--color-accent-primary);
+  }
+  
+  .bottom-nav-item svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-bottom: 0.25rem;
+  }
+  
+  /* Add padding to main content for bottom nav */
+  .main-with-bottom-nav {
+    padding-bottom: 4rem;
+  }
+}
+
+/* ================================
+   Accessibility Improvements
+   ================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .border-dark-600 {
+    border-color: #888 !important;
+  }
+  
+  .text-light-500 {
+    color: #ccc !important;
+  }
+  
+  .bg-dark-700 {
+    background-color: #000 !important;
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print,
+  .sidebar,
+  .mobile-header,
+  .bottom-nav {
+    display: none !important;
+  }
+  
+  .main-content {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}

@@ -72,16 +72,55 @@ async function updateSkill(userId, skillId, data) {
 
   const oldData = skillDoc.data();
   const oldStatus = oldData.status;
+  const newLinkedProjects = data.linkedProjects || oldData.linkedProjects || [];
   const updateData = {
     name: data.name,
     category: data.category,
     status: data.status,
     icon: data.icon,
-    linkedProjects: data.linkedProjects || oldData.linkedProjects || [],
+    linkedProjects: newLinkedProjects,
     updatedAt: admin.firestore.FieldValue.serverTimestamp()
   };
 
   await skillRef.update(updateData);
+
+  // Auto-update tech stack of linked projects with this skill name
+  if (newLinkedProjects.length > 0 && data.name) {
+    const projectsRef = getUserCollection(userId, 'projects');
+    const batch = admin.firestore().batch();
+    let batchCount = 0;
+    
+    for (const projectId of newLinkedProjects) {
+      try {
+        const projectDoc = await projectsRef.doc(projectId).get();
+        if (projectDoc.exists) {
+          const projectData = projectDoc.data();
+          const techStack = projectData.tech_stack || '';
+          const skillName = data.name.toLowerCase();
+          
+          // Check if skill is already in tech stack (case insensitive)
+          const techStackLower = techStack.toLowerCase();
+          if (!techStackLower.includes(skillName)) {
+            // Add skill to tech stack
+            const newTechStack = techStack 
+              ? `${techStack}, ${data.name}` 
+              : data.name;
+            batch.update(projectsRef.doc(projectId), { 
+              tech_stack: newTechStack,
+              updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            });
+            batchCount++;
+          }
+        }
+      } catch (err) {
+        console.warn(`Failed to update tech stack for project ${projectId}:`, err.message);
+      }
+    }
+    
+    if (batchCount > 0) {
+      await batch.commit();
+    }
+  }
 
   // Only log significant status changes (to "mastered")
   if (oldStatus !== data.status && data.status === 'mastered') {

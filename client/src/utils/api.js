@@ -172,7 +172,8 @@ async function fetchWithAuth(url, options = {}, retryCount = 0) {
 
       const response = await fetch(`${API_BASE}${url}`, {
         ...options,
-        headers
+        headers,
+        signal: options.signal // Pass abort signal if provided
       });
       
       // If unauthorized and haven't retried, try once with fresh token
@@ -183,6 +184,11 @@ async function fetchWithAuth(url, options = {}, retryCount = 0) {
       
       return handleResponse(response);
     } catch (error) {
+      // Handle abort errors gracefully
+      if (error.name === 'AbortError') {
+        throw error;
+      }
+      
       if (error instanceof ApiError) {
         // Attach retry function to retryable errors
         if (error.retryable) {
@@ -263,12 +269,12 @@ const api = {
   },
 
   // Stats
-  async getStats() {
-    return fetchWithAuth('/stats');
+  async getStats(options = {}) {
+    return fetchWithAuth('/stats', options);
   },
 
-  async getProgressData() {
-    return fetchWithAuth('/stats/progress');
+  async getProgressData(options = {}) {
+    return fetchWithAuth('/stats/progress', options);
   },
 
   // Skills
@@ -409,12 +415,12 @@ const api = {
   },
 
   // Activities
-  async getActivities() {
-    return fetchWithAuth('/activities');
+  async getActivities(options = {}) {
+    return fetchWithAuth('/activities', options);
   },
 
-  async getHeatmapData() {
-    return fetchWithAuth('/activities/heatmap');
+  async getHeatmapData(options = {}) {
+    return fetchWithAuth('/activities/heatmap', options);
   },
 
   async createActivity(data) {
@@ -438,6 +444,168 @@ const api = {
 
   async clearAllData() {
     return fetchWithAuth('/data', {
+      method: 'DELETE'
+    });
+  },
+
+  // Goals
+  async getGoals() {
+    return fetchWithAuth('/goals');
+  },
+
+  async getGoal(id) {
+    return fetchWithAuth(`/goals/${id}`);
+  },
+
+  async createGoal(data) {
+    return fetchWithAuth('/goals', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  async updateGoal(id, data) {
+    return fetchWithAuth(`/goals/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  },
+
+  async deleteGoal(id) {
+    return fetchWithAuth(`/goals/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
+  async updateMilestone(goalId, milestoneId, completed) {
+    return fetchWithAuth(`/goals/${goalId}/milestones/${milestoneId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ completed })
+    });
+  },
+
+  // Skill Dependencies
+  async getDependencies() {
+    return fetchWithAuth('/dependencies');
+  },
+
+  async getSkillDependencies(skillId) {
+    return fetchWithAuth(`/skills/${skillId}/dependencies`);
+  },
+
+  async setSkillDependencies(skillId, prerequisites) {
+    return fetchWithAuth(`/skills/${skillId}/dependencies`, {
+      method: 'PUT',
+      body: JSON.stringify({ prerequisites })
+    });
+  },
+
+  async addPrerequisite(skillId, prerequisiteId) {
+    return fetchWithAuth(`/skills/${skillId}/dependencies`, {
+      method: 'POST',
+      body: JSON.stringify({ prerequisiteId })
+    });
+  },
+
+  async removePrerequisite(skillId, prereqId) {
+    return fetchWithAuth(`/skills/${skillId}/dependencies/${prereqId}`, {
+      method: 'DELETE'
+    });
+  },
+
+  // Custom Categories
+  async getCategories() {
+    return fetchWithAuth('/categories');
+  },
+
+  async createCategory(data) {
+    return fetchWithAuth('/categories', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  async updateCategory(id, data) {
+    return fetchWithAuth(`/categories/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  },
+
+  async deleteCategory(id) {
+    return fetchWithAuth(`/categories/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
+  async reorderCategories(categoryIds) {
+    return fetchWithAuth('/categories/reorder', {
+      method: 'PUT',
+      body: JSON.stringify({ categoryIds })
+    });
+  },
+
+  // Public Profile
+  async getPublicProfile() {
+    return fetchWithAuth('/profile/public');
+  },
+
+  async updatePublicProfile(data) {
+    return fetchWithAuth('/profile/public', {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  },
+
+  // Study Groups
+  async getStudyGroups() {
+    return fetchWithAuth('/study-groups');
+  },
+
+  async getStudyGroup(id) {
+    return fetchWithAuth(`/study-groups/${id}`);
+  },
+
+  async createStudyGroup(data) {
+    return fetchWithAuth('/study-groups', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  async joinStudyGroup(inviteCode) {
+    return fetchWithAuth('/study-groups/join', {
+      method: 'POST',
+      body: JSON.stringify({ inviteCode })
+    });
+  },
+
+  async leaveStudyGroup(id) {
+    return fetchWithAuth(`/study-groups/${id}/leave`, {
+      method: 'POST'
+    });
+  },
+
+  async deleteStudyGroup(id) {
+    return fetchWithAuth(`/study-groups/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
+  // Progress Sharing
+  async getShares() {
+    return fetchWithAuth('/shares');
+  },
+
+  async createShare(data) {
+    return fetchWithAuth('/shares', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  async revokeShare(id) {
+    return fetchWithAuth(`/shares/${id}`, {
       method: 'DELETE'
     });
   },

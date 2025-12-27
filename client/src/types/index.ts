@@ -83,9 +83,9 @@ export interface Project {
   description: string | null;
   status: ProjectStatus;
   priority: number;
-  githubUrl: string | null;
-  demoUrl: string | null;
-  techStack: string[];
+  github_url: string | null;
+  demo_url: string | null;
+  tech_stack: string[];
   githubRepoId: string | null;
   githubRepoName: string | null;
   startedAt: string | null;
@@ -322,3 +322,140 @@ export interface PaginationParams {
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }
+
+// API Error Codes for consistent error handling
+export type ApiErrorCode =
+  | 'NETWORK_ERROR'
+  | 'TIMEOUT'
+  | 'UNAUTHORIZED'
+  | 'FORBIDDEN'
+  | 'NOT_FOUND'
+  | 'VALIDATION_ERROR'
+  | 'RATE_LIMITED'
+  | 'SERVER_ERROR'
+  | 'SERVICE_UNAVAILABLE'
+  | 'PARSE_ERROR'
+  | 'TOKEN_REFRESH_FAILED'
+  | 'AUTH_NOT_READY'
+  | 'UNKNOWN_ERROR';
+
+// Extended API Error with retry capability
+export interface RetryableApiError extends ApiError {
+  retryable: boolean;
+  retryFn?: () => Promise<unknown>;
+}
+
+// Request options with abort signal support
+export interface ApiRequestOptions {
+  signal?: AbortSignal;
+  headers?: Record<string, string>;
+}
+
+// Batch operation types
+export interface BatchUpdateItem<T> {
+  id: string;
+  data: Partial<T>;
+}
+
+export interface BatchOperationResult {
+  success: boolean;
+  updated: number;
+  failed: number;
+  errors?: Array<{ id: string; error: string }>;
+}
+
+// Share/Collaboration types
+export interface ShareConfig {
+  type: 'skills' | 'projects' | 'profile';
+  isPublic: boolean;
+  expiresAt?: string;
+}
+
+export interface SharedData {
+  id: string;
+  userId: string;
+  type: ShareConfig['type'];
+  data: unknown;
+  createdAt: string;
+  expiresAt?: string;
+}
+
+// Goal types
+export interface Goal {
+  id: string;
+  title: string;
+  description?: string;
+  targetDate?: string;
+  status: 'active' | 'completed' | 'abandoned';
+  progress: number;
+  linkedSkills?: string[];
+  linkedProjects?: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GoalInput {
+  title: string;
+  description?: string;
+  targetDate?: string;
+  linkedSkillIds?: string[];
+  linkedProjectIds?: string[];
+}
+
+// Notification types
+export interface Notification {
+  id: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  title: string;
+  message: string;
+  isRead: boolean;
+  actionUrl?: string;
+  createdAt: string;
+}
+
+// User Profile types
+export interface UserProfile {
+  id: string;
+  username: string;
+  displayName?: string;
+  bio?: string;
+  avatarUrl?: string;
+  socialLinks?: {
+    github?: string;
+    linkedin?: string;
+    twitter?: string;
+    website?: string;
+  };
+  isPublic: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpdateProfileInput {
+  username?: string;
+  displayName?: string;
+  bio?: string;
+  avatarUrl?: string;
+  socialLinks?: UserProfile['socialLinks'];
+  isPublic?: boolean;
+}
+
+// Data Export types
+export interface ExportOptions {
+  format: 'json' | 'csv';
+  includeSkills?: boolean;
+  includeProjects?: boolean;
+  includeResources?: boolean;
+  includeActivities?: boolean;
+}
+
+export interface ImportResult {
+  success: boolean;
+  imported: {
+    skills: number;
+    projects: number;
+    resources: number;
+  };
+  errors?: string[];
+}
+

@@ -126,10 +126,10 @@ The app includes a modern landing page (`/`) featuring:
 ## Tech Stack
 
 ### Frontend
-- **Framework:** React 18 with Vite
+- **Framework:** React 18 with TypeScript and Vite
 - **Styling:** Tailwind CSS with custom design tokens
 - **Design System:** Minimal dark theme (design-tokens.css, component-library.css)
-- **State Management:** React Context API
+- **State Management:** React Context API with TypeScript
 - **Forms:** React Hook Form + Zod validation
 - **Charts:** Recharts
 - **Animations:** Framer Motion
@@ -257,19 +257,19 @@ For detailed deployment instructions, see [DEPLOYMENT.md](DEPLOYMENT.md).
 devAtlas/
 ├── client/                     # React frontend application
 │   ├── src/
-│   │   ├── components/         # Reusable UI components
+│   │   ├── components/         # Reusable UI components (TypeScript)
 │   │   │   ├── common/         # Form fields, Modal, KanbanBoard
 │   │   │   └── ...             # Feature-specific components
-│   │   ├── contexts/           # React Context providers
+│   │   ├── contexts/           # React Context providers (TypeScript)
 │   │   ├── hooks/              # Custom React hooks
-│   │   ├── lib/                # Firebase configuration
-│   │   ├── pages/              # Page components
+│   │   ├── lib/                # Firebase configuration, API utilities
+│   │   ├── pages/              # Page components (TypeScript)
 │   │   │   ├── Landing.tsx     # Public landing page
-│   │   │   ├── Dashboard.jsx   # Main dashboard
-│   │   │   ├── StackTracker.jsx # Skill tracking
-│   │   │   ├── Projects.jsx    # Project management
-│   │   │   ├── Resources.jsx   # Resource library
-│   │   │   └── Settings.jsx    # User settings
+│   │   │   ├── Dashboard.tsx   # Main dashboard
+│   │   │   ├── StackTracker/   # Skill tracking module
+│   │   │   ├── Projects/       # Project management module
+│   │   │   ├── Resources/      # Resource library module
+│   │   │   └── Settings.tsx    # User settings
 │   │   ├── types/              # TypeScript type definitions
 │   │   └── utils/              # API client and utilities
 │   ├── design-tokens.css       # Design system CSS variables

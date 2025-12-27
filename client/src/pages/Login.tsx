@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext.jsx';
+import { useAuth } from '../contexts/AuthContext';
 import { Github, Eye, EyeOff, Loader2, Check, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 

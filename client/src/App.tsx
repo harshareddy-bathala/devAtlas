@@ -2,10 +2,17 @@ import { lazy, Suspense, useEffect } from 'react';
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { AuthProvider, useAuth } from './contexts/AuthContext.jsx';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { OnboardingProvider, useOnboarding } from './contexts/OnboardingContext';
+import { ConnectionProvider } from './contexts/ConnectionContext';
+import { UndoProvider } from './contexts/UndoContext';
+import { GoalsProvider } from './contexts/GoalsContext';
+import { CustomCategoriesProvider } from './contexts/CustomCategoriesContext';
+import { NotificationsProvider } from './contexts/NotificationsContext';
+import { CollaborationProvider } from './contexts/CollaborationContext';
 import ErrorBoundary from './components/ErrorBoundary';
+import { RouteErrorBoundary } from './components/RouteErrorBoundary';
 import Layout from './components/Layout';
 import { Loader2 } from 'lucide-react';
 
@@ -16,9 +23,12 @@ const StackTracker = lazy(() => import('./pages/StackTracker'));
 const Projects = lazy(() => import('./pages/Projects'));
 const Resources = lazy(() => import('./pages/Resources'));
 const Settings = lazy(() => import('./pages/Settings'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Account = lazy(() => import('./pages/Account'));
 const LoginPage = lazy(() => import('./pages/Login'));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPassword'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
+const Explore = lazy(() => import('./pages/Explore'));
 
 // Page loader component for Suspense fallback
 function PageLoader() {
@@ -166,14 +176,16 @@ function AppRoutes() {
       <Suspense fallback={<PageLoader />}>
       <Routes>
         {/* Landing page - public facing */}
-        <Route path="/" element={<LandingRoute />} />
+        <Route path="/" element={<RouteErrorBoundary><LandingRoute /></RouteErrorBoundary>} />
 
         {/* Public routes */}
         <Route
           path="/login"
           element={
             <PublicRoute>
-              <LoginPage />
+              <RouteErrorBoundary>
+                <LoginPage />
+              </RouteErrorBoundary>
             </PublicRoute>
           }
         />
@@ -181,7 +193,9 @@ function AppRoutes() {
           path="/forgot-password"
           element={
             <PublicRoute>
-              <ForgotPasswordPage />
+              <RouteErrorBoundary>
+                <ForgotPasswordPage />
+              </RouteErrorBoundary>
             </PublicRoute>
           }
         />
@@ -191,7 +205,9 @@ function AppRoutes() {
           path="/onboarding"
           element={
             <OnboardingRoute>
-              <Onboarding />
+              <RouteErrorBoundary>
+                <Onboarding />
+              </RouteErrorBoundary>
             </OnboardingRoute>
           }
         />
@@ -201,7 +217,19 @@ function AppRoutes() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <Dashboard />
+              <RouteErrorBoundary>
+                <Dashboard />
+              </RouteErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/explore"
+          element={
+            <ProtectedRoute>
+              <RouteErrorBoundary>
+                <Explore />
+              </RouteErrorBoundary>
             </ProtectedRoute>
           }
         />
@@ -209,7 +237,9 @@ function AppRoutes() {
           path="/stack"
           element={
             <ProtectedRoute>
-              <StackTracker />
+              <RouteErrorBoundary>
+                <StackTracker />
+              </RouteErrorBoundary>
             </ProtectedRoute>
           }
         />
@@ -217,7 +247,9 @@ function AppRoutes() {
           path="/projects"
           element={
             <ProtectedRoute>
-              <Projects />
+              <RouteErrorBoundary>
+                <Projects />
+              </RouteErrorBoundary>
             </ProtectedRoute>
           }
         />
@@ -225,7 +257,9 @@ function AppRoutes() {
           path="/resources"
           element={
             <ProtectedRoute>
-              <Resources />
+              <RouteErrorBoundary>
+                <Resources />
+              </RouteErrorBoundary>
             </ProtectedRoute>
           }
         />
@@ -233,7 +267,29 @@ function AppRoutes() {
           path="/settings"
           element={
             <ProtectedRoute>
-              <Settings />
+              <RouteErrorBoundary>
+                <Settings />
+              </RouteErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <RouteErrorBoundary>
+                <Profile />
+              </RouteErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/account"
+          element={
+            <ProtectedRoute>
+              <RouteErrorBoundary>
+                <Account />
+              </RouteErrorBoundary>
             </ProtectedRoute>
           }
         />
@@ -259,37 +315,49 @@ export default function App() {
       <ThemeProvider>
         <AuthProvider>
           <OnboardingProvider>
-            <BrowserRouter
-              future={{
-                v7_startTransition: true,
-                v7_relativeSplatPath: true,
-              }}
-            >
-              <AppRoutes />
-              <Toaster
-                position="bottom-right"
-                toastOptions={{
-                  duration: 4000,
-                  style: {
-                    background: '#18181B',
-                    color: '#FAFAFA',
-                    border: '1px solid #27272A',
-                  },
-                  success: {
-                    iconTheme: {
-                      primary: '#22C55E',
-                      secondary: '#FAFAFA',
-                    },
-                  },
-                  error: {
-                    iconTheme: {
-                      primary: '#EF4444',
-                      secondary: '#FAFAFA',
-                    },
-                  },
-                }}
-              />
-            </BrowserRouter>
+            <ConnectionProvider>
+              <UndoProvider>
+                <GoalsProvider>
+                  <CustomCategoriesProvider>
+                    <NotificationsProvider>
+                      <CollaborationProvider>
+                        <BrowserRouter
+                          future={{
+                            v7_startTransition: true,
+                            v7_relativeSplatPath: true,
+                          }}
+                        >
+                          <AppRoutes />
+                          <Toaster
+                            position="bottom-right"
+                            toastOptions={{
+                              duration: 4000,
+                              style: {
+                                background: '#18181B',
+                                color: '#FAFAFA',
+                                border: '1px solid #27272A',
+                              },
+                              success: {
+                                iconTheme: {
+                                  primary: '#22C55E',
+                                  secondary: '#FAFAFA',
+                                },
+                              },
+                              error: {
+                                iconTheme: {
+                                  primary: '#EF4444',
+                                  secondary: '#FAFAFA',
+                                },
+                              },
+                            }}
+                          />
+                        </BrowserRouter>
+                      </CollaborationProvider>
+                    </NotificationsProvider>
+                  </CustomCategoriesProvider>
+                </GoalsProvider>
+              </UndoProvider>
+            </ConnectionProvider>
           </OnboardingProvider>
         </AuthProvider>
       </ThemeProvider>

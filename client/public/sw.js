@@ -82,6 +82,16 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
   
+  // Skip unsupported schemes (chrome-extension, etc.)
+  if (!url.protocol.startsWith('http')) {
+    return;
+  }
+  
+  // Skip cross-origin requests (like Firebase auth)
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+  
   // Skip non-GET requests for caching (they'll be queued if offline)
   if (request.method !== 'GET') {
     event.respondWith(handleMutation(request));
@@ -272,12 +282,18 @@ self.addEventListener('sync', (event) => {
  * Process queued mutations
  */
 async function processMutationQueue() {
-  const db = await openDatabase();
-  const tx = db.transaction(OFFLINE_QUEUE_NAME, 'readwrite');
-  const store = tx.objectStore(OFFLINE_QUEUE_NAME);
-  const mutations = await store.getAll();
-  
-  console.log(`[SW] Processing ${mutations.length} queued mutations`);
+  try {
+    const db = await openDatabase();
+    const tx = db.transaction(OFFLINE_QUEUE_NAME, 'readwrite');
+    const store = tx.objectStore(OFFLINE_QUEUE_NAME);
+    const mutations = await store.getAll();
+    
+    if (!mutations || !Array.isArray(mutations)) {
+      console.log('[SW] No mutations to process');
+      return;
+    }
+    
+    console.log(`[SW] Processing ${mutations.length} queued mutations`);
   
   for (const mutation of mutations) {
     try {
@@ -310,6 +326,9 @@ async function processMutationQueue() {
       count: mutations.length,
     });
   });
+  } catch (error) {
+    console.error('[SW] Error processing mutation queue:', error);
+  }
 }
 
 /**

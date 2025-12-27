@@ -3,6 +3,7 @@
 @import './styles/design-tokens.css';
 @import './styles/component-library.css';
 @import './styles/accessibility.css';
+@import './styles/mobile.css';
 
 /* Tailwind Directives */
 @tailwind base;
