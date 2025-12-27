@@ -115,8 +115,7 @@ app.use((req, res, next) => {
         baseUri: ["'self'"],
         formAction: ["'self'"],
         objectSrc: ["'none'"],
-        mediaSrc: ["'self'"],
-        upgradeInsecureRequests: isDev ? [] : undefined
+        mediaSrc: ["'self'"]
       }
     },
     crossOriginEmbedderPolicy: false,
