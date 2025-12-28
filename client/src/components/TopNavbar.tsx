@@ -13,8 +13,10 @@ import {
   BookOpen,
   Bookmark,
   Moon,
+  Sun,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { NotificationsPanel } from './NotificationsPanel';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
@@ -22,6 +24,7 @@ import toast from 'react-hot-toast';
 export default function TopNavbar() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
+  const { resolvedTheme, toggleTheme } = useTheme();
   
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -192,10 +195,10 @@ export default function TopNavbar() {
             <NavLink
               to="/dashboard"
               className={({ isActive }) =>
-                `text-sm font-medium transition-colors relative pb-1 ${
+                `text-sm font-medium transition-colors relative pb-1 flex items-center ${
                   isActive
-                    ? 'text-[#a78bfa]'
-                    : 'text-[#a0aec0] hover:text-white'
+                    ? 'text-accent-primary'
+                    : 'text-light-500 hover:text-white'
                 }`
               }
             >
@@ -212,7 +215,7 @@ export default function TopNavbar() {
             <NavLink
               to="/explore"
               className={({ isActive }) =>
-                `text-sm font-medium transition-colors relative pb-1 ${
+                `text-sm font-medium transition-colors relative pb-1 flex items-center ${
                   isActive
                     ? 'text-accent-primary'
                     : 'text-light-500 hover:text-white'
@@ -221,7 +224,7 @@ export default function TopNavbar() {
             >
               {({ isActive }) => (
                 <>
-                  Explore Courses
+                  Explore
                   {isActive && (
                     <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-accent-primary" />
                   )}
@@ -256,7 +259,7 @@ export default function TopNavbar() {
                     setIsPersonalMenuOpen(true);
                   }
                 }}
-                className="flex items-center gap-1 text-sm font-medium text-light-500 hover:text-white transition-colors py-2"
+                className="flex items-center gap-1 text-sm font-medium text-light-500 hover:text-white transition-colors py-1"
               >
                 Personal
                 <ChevronDown className={`w-4 h-4 transition-transform ${isPersonalMenuOpen ? 'rotate-180' : ''}`} />
@@ -468,16 +471,17 @@ export default function TopNavbar() {
                       <div className="border-t border-dark-600 py-2">
                         <button
                           onClick={() => {
-                            toast('Theme switching coming soon!', { icon: '🌙' });
+                            toggleTheme();
+                            toast.success(`Switched to ${resolvedTheme === 'dark' ? 'light' : 'dark'} mode`);
                           }}
                           className="flex items-center justify-between w-full px-4 py-2.5 text-sm text-light-400 hover:bg-dark-700 hover:text-white transition-colors"
                         >
                           <div className="flex items-center gap-3">
-                            <Moon className="w-4 h-4" />
+                            {resolvedTheme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                             Switch theme
                           </div>
-                          <span className="text-xs text-light-500 bg-dark-600 px-2 py-0.5 rounded">
-                            Dark
+                          <span className="text-xs text-light-500 bg-dark-600 px-2 py-0.5 rounded capitalize">
+                            {resolvedTheme}
                           </span>
                         </button>
                       </div>

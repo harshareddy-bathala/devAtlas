@@ -24,7 +24,6 @@ const Projects = lazy(() => import('./pages/Projects'));
 const Resources = lazy(() => import('./pages/Resources'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Profile = lazy(() => import('./pages/Profile'));
-const Account = lazy(() => import('./pages/Account'));
 const LoginPage = lazy(() => import('./pages/Login'));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPassword'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
@@ -285,13 +284,7 @@ function AppRoutes() {
         />
         <Route
           path="/account"
-          element={
-            <ProtectedRoute>
-              <RouteErrorBoundary>
-                <Account />
-              </RouteErrorBoundary>
-            </ProtectedRoute>
-          }
+          element={<Navigate to="/settings" replace />}
         />
 
         {/* Catch all - redirect to landing */}

@@ -155,9 +155,16 @@ function Dashboard() {
     })) || [];
   }, [progressData]);
 
-  // Calculate total skills and projects
-  const totalSkills = (stats?.skills?.mastered || 0) + (stats?.skills?.learning || 0) + (stats?.skills?.want_to_learn || 0);
-  const totalProjects = (stats?.projects?.active || 0) + (stats?.projects?.completed || 0) + (stats?.projects?.idea || 0);
+  // Calculate total skills and projects (handling both lowercase and uppercase status keys)
+  const totalSkills = useMemo(() => {
+    if (!stats?.skills) return 0;
+    return Object.values(stats.skills).reduce((sum: number, count) => sum + (typeof count === 'number' ? count : 0), 0);
+  }, [stats?.skills]);
+  
+  const totalProjects = useMemo(() => {
+    if (!stats?.projects) return 0;
+    return Object.values(stats.projects).reduce((sum: number, count) => sum + (typeof count === 'number' ? count : 0), 0);
+  }, [stats?.projects]);
 
   // Memoize stat cards
   const statCards: StatCardProps[] = useMemo(() => [

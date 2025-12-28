@@ -16,11 +16,96 @@ import {
   Target,
   Flame,
   FolderKanban,
-  BookOpen
+  BookOpen,
+  Users
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
+import { StudyGroupsPanel } from '../components/CollaborationPanel';
+
+// Helper to format date
+function formatMemberSince(dateString?: string): string {
+  if (!dateString) return 'Member';
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Member';
+    return `Member since ${date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
+  } catch {
+    return 'Member';
+  }
+}
+
+// Achievement definitions with real conditions
+interface Achievement {
+  id: string;
+  icon: string;
+  title: string;
+  description: string;
+  condition: (stats: any) => boolean;
+}
+
+const ACHIEVEMENTS: Achievement[] = [
+  {
+    id: 'first_skill',
+    icon: '🎯',
+    title: 'First Skill',
+    description: 'Mastered first skill',
+    condition: (stats) => (stats?.skills?.mastered || stats?.skills?.MASTERED || 0) >= 1
+  },
+  {
+    id: 'on_fire',
+    icon: '🔥',
+    title: 'On Fire',
+    description: '7-day streak',
+    condition: (stats) => (stats?.currentStreak || 0) >= 7
+  },
+  {
+    id: 'launcher',
+    icon: '🚀',
+    title: 'Launcher',
+    description: '5 projects started',
+    condition: (stats) => {
+      const total = Object.values(stats?.projects || {}).reduce((sum: number, count: any) => sum + (count || 0), 0);
+      return total >= 5;
+    }
+  },
+  {
+    id: 'power_user',
+    icon: '⚡',
+    title: 'Power User',
+    description: '30-day streak',
+    condition: (stats) => (stats?.currentStreak || 0) >= 30
+  },
+  {
+    id: 'bookworm',
+    icon: '📚',
+    title: 'Bookworm',
+    description: '10 resources saved',
+    condition: (stats) => (stats?.resources || 0) >= 10
+  },
+  {
+    id: 'skill_collector',
+    icon: '💎',
+    title: 'Skill Collector',
+    description: '5 skills mastered',
+    condition: (stats) => (stats?.skills?.mastered || stats?.skills?.MASTERED || 0) >= 5
+  },
+  {
+    id: 'consistent',
+    icon: '📅',
+    title: 'Consistent',
+    description: '14-day streak',
+    condition: (stats) => (stats?.currentStreak || 0) >= 14
+  },
+  {
+    id: 'project_master',
+    icon: '🏆',
+    title: 'Project Master',
+    description: '3 projects completed',
+    condition: (stats) => (stats?.projects?.completed || stats?.projects?.COMPLETED || 0) >= 3
+  }
+];
 
 export default function Profile() {
   const { user, refreshUserProfile } = useAuth();
@@ -28,6 +113,7 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [stats, setStats] = useState<any>(null);
+  const [memberSince, setMemberSince] = useState<string>('');
   
   const [profileData, setProfileData] = useState({
     displayName: '',
@@ -68,6 +154,7 @@ export default function Profile() {
       setProfileData(data);
       setOriginalData(data);
       setStats(statsData);
+      setMemberSince(profile.createdAt || '');
     } catch (error) {
       console.error('Failed to load profile:', error);
     } finally {
@@ -243,7 +330,7 @@ export default function Profile() {
             )}
             <div className="flex items-center gap-1.5">
               <Calendar className="w-4 h-4" />
-              <span>Member</span>
+              <span>{formatMemberSince(memberSince)}</span>
             </div>
           </div>
         </div>
@@ -255,14 +342,16 @@ export default function Profile() {
           <div className="w-10 h-10 mx-auto mb-2 rounded-lg bg-green-500/10 flex items-center justify-center">
             <Target className="w-5 h-5 text-green-500" />
           </div>
-          <p className="text-2xl font-bold text-white">{stats?.skills?.mastered || 0}</p>
+          <p className="text-2xl font-bold text-white">{stats?.skills?.mastered || stats?.skills?.MASTERED || 0}</p>
           <p className="text-xs text-light-500">Skills Mastered</p>
         </div>
         <div className="bg-dark-800 border border-dark-600 rounded-xl p-4 text-center">
           <div className="w-10 h-10 mx-auto mb-2 rounded-lg bg-purple-500/10 flex items-center justify-center">
             <FolderKanban className="w-5 h-5 text-purple-500" />
           </div>
-          <p className="text-2xl font-bold text-white">{stats?.projects?.total || 0}</p>
+          <p className="text-2xl font-bold text-white">
+            {Object.values(stats?.projects || {}).reduce((sum: number, count: any) => sum + (typeof count === 'number' ? count : 0), 0)}
+          </p>
           <p className="text-xs text-light-500">Projects</p>
         </div>
         <div className="bg-dark-800 border border-dark-600 rounded-xl p-4 text-center">
@@ -276,7 +365,7 @@ export default function Profile() {
           <div className="w-10 h-10 mx-auto mb-2 rounded-lg bg-blue-500/10 flex items-center justify-center">
             <BookOpen className="w-5 h-5 text-blue-500" />
           </div>
-          <p className="text-2xl font-bold text-white">{stats?.resources?.total || 0}</p>
+          <p className="text-2xl font-bold text-white">{stats?.resources || 0}</p>
           <p className="text-xs text-light-500">Resources</p>
         </div>
       </div>
@@ -392,30 +481,44 @@ export default function Profile() {
         </div>
       </div>
 
+      {/* Study Groups Section */}
+      <div className="bg-dark-800 border border-dark-600 rounded-xl p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+            <Users className="w-5 h-5 text-purple-400" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-white">Study Groups</h2>
+            <p className="text-xs text-light-500">Learn together with others</p>
+          </div>
+        </div>
+        <StudyGroupsPanel />
+      </div>
+
       {/* Achievements Section */}
       <div className="bg-dark-800 border border-dark-600 rounded-xl p-6">
-        <h2 className="text-lg font-semibold text-white mb-4">Achievements</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-white">Achievements</h2>
+          <span className="text-xs text-light-500">
+            {ACHIEVEMENTS.filter(a => a.condition(stats)).length}/{ACHIEVEMENTS.length} unlocked
+          </span>
+        </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="flex flex-col items-center p-4 bg-dark-700/50 rounded-lg">
-            <span className="text-3xl mb-2">🎯</span>
-            <p className="text-sm font-medium text-white">First Skill</p>
-            <p className="text-xs text-light-500">Mastered first skill</p>
-          </div>
-          <div className="flex flex-col items-center p-4 bg-dark-700/50 rounded-lg">
-            <span className="text-3xl mb-2">🔥</span>
-            <p className="text-sm font-medium text-white">On Fire</p>
-            <p className="text-xs text-light-500">7-day streak</p>
-          </div>
-          <div className="flex flex-col items-center p-4 bg-dark-700/50 rounded-lg opacity-40">
-            <span className="text-3xl mb-2">🚀</span>
-            <p className="text-sm font-medium text-white">Launcher</p>
-            <p className="text-xs text-light-500">5 projects started</p>
-          </div>
-          <div className="flex flex-col items-center p-4 bg-dark-700/50 rounded-lg opacity-40">
-            <span className="text-3xl mb-2">⚡</span>
-            <p className="text-sm font-medium text-white">Power User</p>
-            <p className="text-xs text-light-500">30-day streak</p>
-          </div>
+          {ACHIEVEMENTS.map((achievement) => {
+            const isUnlocked = achievement.condition(stats);
+            return (
+              <div 
+                key={achievement.id}
+                className={`flex flex-col items-center p-4 bg-dark-700/50 rounded-lg transition-all ${
+                  isUnlocked ? 'ring-1 ring-accent-primary/30' : 'opacity-40 grayscale'
+                }`}
+              >
+                <span className="text-3xl mb-2">{achievement.icon}</span>
+                <p className="text-sm font-medium text-white text-center">{achievement.title}</p>
+                <p className="text-xs text-light-500 text-center">{achievement.description}</p>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

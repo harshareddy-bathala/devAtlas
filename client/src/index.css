@@ -12,10 +12,17 @@
 
 /* CSS Variables for theming */
 :root {
-  /* Toast colors */
+  /* Toast colors - dark theme default */
   --toast-bg: #18181B;
   --toast-color: #FAFAFA;
   --toast-border: #27272A;
+}
+
+/* Light theme overrides */
+.light {
+  --toast-bg: #FFFFFF;
+  --toast-color: #18181B;
+  --toast-border: #E4E4E7;
 }
 
 @layer base {
@@ -25,15 +32,63 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  /* Dark theme (default) */
   body {
     @apply bg-dark-900 text-white antialiased;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 
+  /* Light theme body styles */
+  .light body,
+  body.light,
+  html.light body {
+    @apply bg-light-100 text-gray-900;
+  }
+
+  /* Light theme component overrides */
+  .light .bg-dark-900 { @apply bg-gray-50; }
+  .light .bg-dark-850 { @apply bg-gray-100; }
+  .light .bg-dark-800 { @apply bg-white; }
+  .light .bg-dark-700 { @apply bg-gray-100; }
+  .light .bg-dark-600 { @apply bg-gray-200; }
+  .light .border-dark-600 { @apply border-gray-300; }
+  .light .border-dark-700 { @apply border-gray-400; }
+  .light .border-dark-500 { @apply border-gray-400; }
+  .light .text-white { @apply text-gray-900; }
+  .light .text-light-500 { @apply text-gray-600; }
+  .light .text-light-400 { @apply text-gray-700; }
+  .light .text-light-300 { @apply text-gray-800; }
+  .light .text-light-200 { @apply text-gray-900; }
+  .light .text-light-100 { @apply text-gray-900; }
+  .light .hover\:bg-dark-700:hover { @apply hover:bg-gray-100; }
+  .light .hover\:bg-dark-600:hover { @apply hover:bg-gray-200; }
+  .light .hover\:bg-dark-500:hover { @apply hover:bg-gray-300; }
+  
+  /* Light theme - stronger borders */
+  .light .rounded-xl { @apply shadow-sm; }
+  .light .bg-dark-700\/50 { @apply bg-gray-100; }
+  .light .bg-dark-600\/50 { @apply bg-gray-200; }
+  
+  /* Light theme inputs and cards */
+  .light input, .light textarea, .light select {
+    @apply bg-white border-gray-300 text-gray-900 placeholder-gray-500;
+  }
+  .light input:focus, .light textarea:focus, .light select:focus {
+    @apply border-purple-500 ring-1 ring-purple-500;
+  }
+  
+  /* Light theme navigation */
+  .light nav { @apply bg-white border-gray-200; }
+  .light aside { @apply bg-white border-gray-200; }
+
   /* Typography */
   h1, h2, h3, h4, h5, h6 {
     @apply font-semibold tracking-tight text-white;
+  }
+
+  .light h1, .light h2, .light h3, .light h4, .light h5, .light h6 {
+    @apply text-gray-900;
   }
 
   h1 { @apply text-3xl md:text-4xl; }

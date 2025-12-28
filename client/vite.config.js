@@ -11,9 +11,12 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
+        // Explicitly alias react to ensure single instance
+        'react': path.resolve(__dirname, './node_modules/react'),
+        'react-dom': path.resolve(__dirname, './node_modules/react-dom'),
       },
       // Force single instance of React
-      dedupe: ['react', 'react-dom'],
+      dedupe: ['react', 'react-dom', 'react/jsx-runtime'],
     },
     server: {
       port: 5173,
@@ -35,6 +38,8 @@ export default defineConfig(({ mode }) => {
       include: [
         'react',
         'react-dom',
+        'react-dom/client',
+        'react/jsx-runtime',
         'react-router-dom',
         'react-hot-toast',
         'lucide-react',
@@ -46,6 +51,9 @@ export default defineConfig(({ mode }) => {
         'date-fns',
         'zod'
       ],
+      esbuildOptions: {
+        jsx: 'automatic',
+      }
     },
     build: {
       // Chunk size warning limit (500KB)
