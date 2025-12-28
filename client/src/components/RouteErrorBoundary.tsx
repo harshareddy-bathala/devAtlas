@@ -1,10 +1,10 @@
-import React from 'react';
+import { Component, ReactNode, ErrorInfo } from 'react';
 import { RefreshCw, Home, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface RouteErrorBoundaryProps {
-  children: React.ReactNode;
-  fallback?: React.ReactNode;
+  children: ReactNode;
+  fallback?: ReactNode;
 }
 
 interface RouteErrorBoundaryState {
@@ -19,7 +19,7 @@ interface RouteErrorBoundaryState {
  * Unlike the global ErrorBoundary, this allows users to navigate
  * away from the error without a full page refresh.
  */
-class RouteErrorBoundaryClass extends React.Component<
+class RouteErrorBoundaryClass extends Component<
   RouteErrorBoundaryProps,
   RouteErrorBoundaryState
 > {
@@ -32,7 +32,7 @@ class RouteErrorBoundaryClass extends React.Component<
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('Route Error:', error, errorInfo);
     
     // You could log to your error tracking service here
@@ -94,9 +94,9 @@ function RouteErrorFallbackContent({ error, onRetry }: RouteErrorFallbackProps) 
 
   const handleGoHome = () => {
     if (navigate) {
-      navigate('/dashboard');
+      navigate('/');
     } else {
-      window.location.href = '/dashboard';
+      window.location.href = '/';
     }
   };
 
@@ -170,7 +170,7 @@ function RouteErrorFallbackContent({ error, onRetry }: RouteErrorFallbackProps) 
                 className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-dark-700 hover:bg-dark-600 text-white font-medium rounded-lg transition-colors border border-dark-500"
               >
                 <Home className="w-4 h-4" />
-                Dashboard
+                Home
               </button>
             </>
           )}

@@ -12,15 +12,40 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@': path.resolve(__dirname, './src'),
       },
+      // Force single instance of React
+      dedupe: ['react', 'react-dom'],
     },
     server: {
       port: 5173,
+      // Fix WebSocket/HMR issues
+      hmr: {
+        protocol: 'ws',
+        host: 'localhost',
+        port: 5173,
+      },
       proxy: {
         '/api': {
           target: 'http://localhost:3001',
           changeOrigin: true
         }
       }
+    },
+    // Force re-optimization of dependencies
+    optimizeDeps: {
+      include: [
+        'react',
+        'react-dom',
+        'react-router-dom',
+        'react-hot-toast',
+        'lucide-react',
+        'firebase/app',
+        'firebase/auth',
+        'firebase/firestore',
+        'framer-motion',
+        'recharts',
+        'date-fns',
+        'zod'
+      ],
     },
     build: {
       // Chunk size warning limit (500KB)

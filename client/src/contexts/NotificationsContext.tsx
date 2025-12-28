@@ -311,4 +311,14 @@ export function useNotifications(): NotificationsContextValue {
   return context;
 }
 
+// Safe version that returns null if not in provider
+export function useNotificationsIfAvailable(): NotificationsContextValue | null {
+  try {
+    const context = useContext(NotificationsContext);
+    return context;
+  } catch {
+    return null;
+  }
+}
+
 export default NotificationsContext;

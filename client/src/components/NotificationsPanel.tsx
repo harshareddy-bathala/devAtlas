@@ -23,13 +23,13 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useNotifications, Notification } from '../contexts/NotificationsContext';
+import { useNotifications, useNotificationsIfAvailable, Notification } from '../contexts/NotificationsContext';
 
 interface NotificationsPanelProps {
   className?: string;
 }
 
-export function NotificationsPanel({ className = '' }: NotificationsPanelProps) {
+function NotificationsPanelContent({ className = '' }: NotificationsPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -317,6 +317,25 @@ export function NotificationsPanel({ className = '' }: NotificationsPanelProps) 
       )}
     </div>
   );
+}
+
+export function NotificationsPanel({ className = '' }: NotificationsPanelProps) {
+  const context = useNotificationsIfAvailable();
+  
+  if (!context) {
+    // If notifications context is not available, render a simple bell icon
+    return (
+      <button
+        className={`relative p-2 text-light-400 hover:text-light-200 transition-colors ${className}`}
+        title="Notifications"
+        disabled
+      >
+        <Bell className="w-5 h-5" />
+      </button>
+    );
+  }
+  
+  return <NotificationsPanelContent className={className} />;
 }
 
 export default NotificationsPanel;

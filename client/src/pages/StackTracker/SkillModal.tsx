@@ -1,4 +1,4 @@
-import React from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -56,10 +56,10 @@ export function SkillModal({
   });
 
   const selectedIcon = watch('icon');
-  const [projectDropdownOpen, setProjectDropdownOpen] = React.useState(false);
+  const [projectDropdownOpen, setProjectDropdownOpen] = useState(false);
 
   // Reset form when editingSkill changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (isOpen) {
       const linkedProjects = Array.isArray(editingSkill?.linkedProjects)
         ? editingSkill.linkedProjects

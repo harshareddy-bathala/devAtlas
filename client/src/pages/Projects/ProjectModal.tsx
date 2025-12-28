@@ -1,4 +1,4 @@
-import React from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -50,7 +50,7 @@ export function ProjectModal({
   });
 
   // Reset form when modal opens
-  React.useEffect(() => {
+  useEffect(() => {
     if (isOpen) {
       if (editingProject) {
         reset({

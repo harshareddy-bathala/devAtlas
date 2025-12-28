@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Github, Eye, EyeOff, Loader2, Check, X } from 'lucide-react';
+import { Github, Eye, EyeOff, Loader2, Check, X, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 type AuthMode = 'signin' | 'signup';
@@ -34,6 +34,7 @@ function getPasswordStrength(password: string): { score: number; label: string; 
 
 export default function LoginPage() {
   const { signIn, signUp, signInWithGitHub, signInWithGoogle, isLoading } = useAuth();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   
   // Read initial mode from URL query param
@@ -163,14 +164,22 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0A0A0B]">
-      {/* Header with Logo */}
-      <header className="p-6">
+      {/* Header with Logo and Back Button */}
+      <header className="p-6 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
           <div className="w-8 h-8 rounded bg-[#8B5CF6] flex items-center justify-center text-lg">
             🚀
           </div>
           <span className="font-semibold text-white text-lg">DevOrbit</span>
         </Link>
+        <button
+          onClick={() => navigate('/')}
+          className="flex items-center gap-2 px-3 py-2 text-[#888] hover:text-white transition-colors rounded border border-transparent hover:border-[#333]"
+          title="Back to home"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span className="text-sm">Back</span>
+        </button>
       </header>
 
       {/* Main Content */}
@@ -236,6 +245,9 @@ export default function LoginPage() {
                   setEmail(e.target.value);
                   if (errors.email) setErrors(prev => ({ ...prev, email: undefined }));
                 }}
+                onFocus={() => {
+                  if (errors.email) setErrors(prev => ({ ...prev, email: undefined }));
+                }}
                 onBlur={() => handleBlur('email')}
                 placeholder="your@email.com"
                 className={`w-full px-4 py-3 bg-transparent border rounded text-white placeholder-[#666] focus:outline-none transition-colors ${
@@ -260,6 +272,9 @@ export default function LoginPage() {
                   value={password}
                   onChange={e => {
                     setPassword(e.target.value);
+                    if (errors.password) setErrors(prev => ({ ...prev, password: undefined }));
+                  }}
+                  onFocus={() => {
                     if (errors.password) setErrors(prev => ({ ...prev, password: undefined }));
                   }}
                   onBlur={() => handleBlur('password')}

@@ -1,4 +1,4 @@
-import React from 'react';
+import { createElement } from 'react';
 import { Plus } from 'lucide-react';
 import { Skill } from './useSkills';
 import { SkillCard } from './SkillCard';
@@ -71,7 +71,7 @@ export function SkillColumn({
         {skills.length === 0 && (
           <div className="text-center py-12 px-4">
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-dark-700 flex items-center justify-center">
-              {React.createElement(Icon, {
+              {createElement(Icon, {
                 className: `w-8 h-8 ${config.color.split(' ')[1]}`,
                 'aria-hidden': 'true',
               })}
