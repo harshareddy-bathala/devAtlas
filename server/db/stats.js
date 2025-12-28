@@ -157,7 +157,9 @@ async function getProgressData(userId) {
     // Calculate progress: skills marked as mastered
     skillsSnap.docs.forEach(doc => {
       const skill = doc.data();
-      if (skill.status === 'MASTERED' && skill.updatedAt) {
+      // Check for both lowercase (current) and uppercase (legacy) status
+      const isMastered = skill.status === 'mastered' || skill.status === 'MASTERED';
+      if (isMastered && skill.updatedAt) {
         const date = new Date(skill.updatedAt);
         if (date >= eightyFourDaysAgo) {
           const week = getWeekNumber(date);

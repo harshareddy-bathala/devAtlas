@@ -320,12 +320,20 @@ app.get('/api/v1/profile', authMiddleware, asyncHandler(async (req, res) => {
     return;
   }
   
-  res.json({ success: true, data: userDoc.data() });
+  const data = userDoc.data();
+  // Convert Firestore Timestamps to ISO strings for client
+  const responseData = {
+    ...data,
+    createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt || null,
+    updatedAt: data.updatedAt?.toDate?.()?.toISOString() || data.updatedAt || null
+  };
+  
+  res.json({ success: true, data: responseData });
 }));
 
 app.put('/api/v1/profile', authMiddleware, validate(profileSchema), asyncHandler(async (req, res) => {
   const userId = req.user.id;
-  const { displayName, username, purpose, bio } = req.body;
+  const { displayName, username, purpose, bio, location, website, github, twitter, linkedin } = req.body;
   const firestore = getDb();
   
   // If username provided, check uniqueness (validation already done by Zod)
@@ -341,13 +349,27 @@ app.put('/api/v1/profile', authMiddleware, validate(profileSchema), asyncHandler
     }
   }
   
+  // Check if user exists to handle createdAt properly
+  const userDoc = await firestore.collection('users').doc(userId).get();
+  const isNewUser = !userDoc.exists;
+  
   const updateData = {
     displayName: displayName.trim(),
     purpose: purpose || '',
     bio: bio || '',
+    location: location || '',
+    website: website || '',
+    github: github || '',
+    twitter: twitter || '',
+    linkedin: linkedin || '',
     isOnboarded: true,
     updatedAt: admin.firestore.FieldValue.serverTimestamp()
   };
+  
+  // Set createdAt only for new users
+  if (isNewUser) {
+    updateData.createdAt = admin.firestore.FieldValue.serverTimestamp();
+  }
   
   // Only update username if it's new or being set for first time
   if (username) {

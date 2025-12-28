@@ -133,6 +133,26 @@ const profileSchema = z.object({
   bio: z.string()
     .max(1000, 'Bio must be less than 1000 characters')
     .optional()
+    .default(''),
+  location: z.string()
+    .max(100, 'Location must be less than 100 characters')
+    .optional()
+    .default(''),
+  website: z.string()
+    .max(200, 'Website URL must be less than 200 characters')
+    .optional()
+    .default(''),
+  github: z.string()
+    .max(50, 'GitHub username must be less than 50 characters')
+    .optional()
+    .default(''),
+  twitter: z.string()
+    .max(50, 'Twitter username must be less than 50 characters')
+    .optional()
+    .default(''),
+  linkedin: z.string()
+    .max(100, 'LinkedIn username must be less than 100 characters')
+    .optional()
     .default('')
 });
 
